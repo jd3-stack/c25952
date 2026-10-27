@@ -1,0 +1,1464 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>PVT Japon</title>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="PVT Japon">
+<meta name="theme-color" content="#101418">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Semi+Condensed:wght@500;600;700&family=Inter:wght@400;500;600;700&family=M+PLUS+1p:wght@500;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<style>
+:root{
+  --bg:#EEF0F3; --card:#FFFFFF; --ink:#101418; --muted:#5A6270; --line:#DCE0E6; --soft:#F6F7F9; --field:#C9CED6;
+  --rail:#1A8A3F; --on-rail:#FFFFFF; --pos:#157A37; --neg:#D2232A; --neg-text:#B81D23; --sig:#FFC400;
+  --head-bg:#101418; --head-fg:#FFFFFF; --head-sub:#B9C0CB; --amt:#101418;
+  --board:#101418; --board-fg:#FFB020; --board-sub:#B9C0CB;
+  --shadow:0 1px 2px rgba(16,20,24,.06);
+  --num:"Barlow Semi Condensed",system-ui,sans-serif; --sans:Inter,system-ui,sans-serif; --jp:"M PLUS 1p",sans-serif;
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#0B0D10; --card:#15181D; --ink:#E8EAED; --muted:#9AA3AE; --line:#262B33; --soft:#0B0D10; --field:#333944;
+    --rail:#2FBF5F; --on-rail:#0B0D10; --pos:#4ED07A; --neg:#FF5A5F; --neg-text:#FF7C80;
+    --head-bg:#E8EAED; --head-fg:#0B0D10; --head-sub:#3F4652; --amt:#FFB020;
+    --board:#0B0D10; --board-sub:#9AA3AE; --shadow:none; color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0B0D10; --card:#15181D; --ink:#E8EAED; --muted:#9AA3AE; --line:#262B33; --soft:#0B0D10; --field:#333944;
+  --rail:#2FBF5F; --on-rail:#0B0D10; --pos:#4ED07A; --neg:#FF5A5F; --neg-text:#FF7C80;
+  --head-bg:#E8EAED; --head-fg:#0B0D10; --head-sub:#3F4652; --amt:#FFB020;
+  --board:#0B0D10; --board-sub:#9AA3AE; --shadow:none; color-scheme:dark;
+}
+/* fond choisi avec le bouton en haut à droite : prioritaire sur le thème du système */
+:root[data-fond="blanc"]{
+  --bg:#EEF0F3; --card:#FFFFFF; --ink:#101418; --muted:#5A6270; --line:#DCE0E6; --soft:#F6F7F9; --field:#C9CED6;
+  --rail:#1A8A3F; --on-rail:#FFFFFF; --pos:#157A37; --neg:#D2232A; --neg-text:#B81D23;
+  --head-bg:#101418; --head-fg:#FFFFFF; --head-sub:#B9C0CB; --amt:#101418;
+  --board:#101418; --board-sub:#B9C0CB; --shadow:0 1px 2px rgba(16,20,24,.06); color-scheme:light;
+}
+:root[data-fond="noir"]{
+  --bg:#0B0D10; --card:#15181D; --ink:#E8EAED; --muted:#9AA3AE; --line:#262B33; --soft:#0B0D10; --field:#333944;
+  --rail:#2FBF5F; --on-rail:#0B0D10; --pos:#4ED07A; --neg:#FF5A5F; --neg-text:#FF7C80;
+  --head-bg:#E8EAED; --head-fg:#0B0D10; --head-sub:#3F4652; --amt:#FFB020;
+  --board:#0B0D10; --board-sub:#9AA3AE; --shadow:none; color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font-family:var(--sans);-webkit-font-smoothing:antialiased;font-variant-numeric:tabular-nums}
+button,input,textarea{font:inherit;color:inherit}
+.app{max-width:480px;margin:0 auto;min-height:100dvh;padding-bottom:calc(96px + env(safe-area-inset-bottom))}
+
+/* Header — panneau de gare */
+.top{position:sticky;top:0;z-index:500;display:flex;align-items:center;justify-content:space-between;gap:12px;
+  padding:calc(14px + env(safe-area-inset-top)) 16px 12px;background:var(--card);border-bottom:1px solid var(--line)}
+.brand{display:flex;align-items:center;gap:12px}
+.logo{width:42px;height:42px;border-radius:10px;border:4px solid var(--rail);background:var(--card);display:flex;flex-direction:column;
+  align-items:center;justify-content:center;line-height:1;font-family:var(--num);font-weight:700}
+.logo span{font-size:9px;letter-spacing:.06em}
+.logo b{font-size:17px}
+.brand h1{margin:0;font-family:var(--num);font-weight:700;font-size:23px;line-height:1.05}
+.brand p{margin:0;font-size:12px;color:var(--muted)}
+.icon-btn{width:44px;height:44px;border-radius:10px;border:1px solid var(--line);background:var(--card);cursor:pointer;font-size:20px;line-height:1}
+
+main{padding:0 16px}
+.tab{display:none}
+.tab.active{display:block}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px;margin:0 0 14px;box-shadow:var(--shadow);overflow:hidden}
+.card h2{margin:-16px -16px 12px;padding:12px 16px;background:var(--head-bg);color:var(--head-fg);font-family:var(--num);font-weight:700;
+  font-size:18px;letter-spacing:.04em;text-transform:uppercase;display:flex;align-items:center;justify-content:space-between}
+.card h2 small{font-family:var(--jp);font-weight:500;font-size:13px;letter-spacing:0;text-transform:none;color:var(--head-sub)}
+
+/* Mois — stations d'une ligne */
+.months{display:flex;gap:10px;overflow-x:auto;margin:0 -16px 14px;padding:16px 16px 12px;background:var(--card);border-bottom:1px solid var(--line);scrollbar-width:none}
+.months::-webkit-scrollbar{display:none}
+.stn{flex:none;position:relative;width:52px;display:flex;flex-direction:column;align-items:center;gap:6px;border:none;background:none;padding:0;cursor:pointer;--c:var(--rail)}
+.stn::before{content:"";position:absolute;left:-5px;right:-5px;top:19px;height:6px;background:var(--rail)}
+.stn .code{position:relative;width:44px;height:44px;border-radius:10px;border:4px solid var(--c);background:var(--card);display:grid;place-items:center;
+  font-family:var(--num);font-weight:700;font-size:15px}
+.stn .nm{font-size:13px;color:var(--muted)}
+.stn.warn{--c:var(--neg)}
+.stn.warn .nm{color:var(--neg-text);font-weight:600}
+.stn.on .code{background:var(--c);color:var(--on-rail);box-shadow:0 0 0 3px var(--sig)}
+.stn.on .nm{color:var(--ink);font-weight:700}
+
+/* Résumé du mois — panneau de station */
+.hero{padding:0}
+.hero .in{padding:18px 18px 0}
+.hero .hd{display:flex;align-items:center;gap:10px}
+.hero .month{font-family:var(--num);font-weight:700;font-size:30px;letter-spacing:.02em}
+.hero .kj{font-family:var(--jp);font-weight:800;font-size:18px;color:var(--muted)}
+.hero .cur{margin-left:auto;display:flex;border:2px solid var(--ink);border-radius:9px;overflow:hidden}
+.hero .cur button{border:none;background:var(--card);color:var(--ink);min-width:42px;min-height:34px;font-family:var(--num);font-weight:700;font-size:17px;cursor:pointer}
+.hero .cur button.on{background:var(--ink);color:var(--card)}
+.hero .lbl{font-size:12px;font-weight:600;letter-spacing:.06em;color:var(--muted);margin-top:8px}
+.hero .big{font-family:var(--num);font-weight:700;font-size:58px;line-height:1;color:var(--pos)}
+.hero .big.neg{color:var(--neg-text)}
+.hero .eur{font-size:15px;color:var(--muted);margin-top:4px}
+.hero .bar{height:8px;background:var(--rail);margin-top:16px}
+.hero .bar.neg{background:var(--neg)}
+.hero .nav{display:flex;justify-content:space-between;padding:2px 10px 0}
+.hero .nav button{border:none;background:none;padding:0 8px;min-height:36px;font-size:13px;color:var(--muted);cursor:pointer}
+.hero .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding:6px 18px 18px}
+.hero .grid span{display:block;font-size:11px;color:var(--muted)}
+.hero .grid b{font-family:var(--num);font-weight:600;font-size:19px}
+.hero .grid b.p{color:var(--pos);font-weight:700}
+.hero .grid b.n{color:var(--neg-text);font-weight:700}
+
+/* Lignes */
+.row{display:flex;align-items:center;gap:10px;min-height:56px;border-top:1px solid var(--line)}
+.row:first-of-type{border-top:none}
+.row .name{flex:1;font-size:15px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.row .amt,.field .amt{display:flex;align-items:center;gap:6px;height:42px;background:var(--soft);border:1px solid var(--field);border-radius:8px;padding:0 10px;width:140px}
+.row .amt:focus-within,.field .amt:focus-within{border-color:var(--ink);box-shadow:0 0 0 3px var(--sig)}
+.row input,.field input{border:none;background:transparent;width:100%;text-align:right;outline:none;font-family:var(--num);font-weight:600;font-size:19px;color:var(--amt)}
+.row .yen{color:var(--muted);font-weight:600}
+.row .unit,.field .unit{flex:none;border:1px solid var(--field);background:var(--card);border-radius:6px;padding:2px 6px;color:var(--ink);
+  font-family:var(--num);font-weight:700;font-size:15px;line-height:1.2;cursor:pointer}
+.curpick{display:inline-flex;margin-left:6px;border:1px solid var(--field);border-radius:6px;overflow:hidden;vertical-align:middle}
+.curpick button{border:none;background:var(--card);color:var(--ink);padding:3px 10px;font-family:var(--num);font-weight:700;font-size:14px;cursor:pointer}
+.curpick button.on{background:var(--ink);color:var(--card)}
+.sheet .fld{margin-bottom:14px}
+.sheet .fld > .small-label{display:flex;align-items:center;min-height:26px}
+.sheet .fld input{display:block;width:100%;margin-top:6px;border:1px solid var(--field);background:var(--soft);border-radius:10px;
+  padding:12px 14px;outline:none;font-size:16px;font-weight:500;color:var(--ink)}
+.sheet .fld input:focus{border-color:var(--ink);box-shadow:0 0 0 3px var(--sig)}
+.item span small.o{font-weight:500}
+.row .del{display:none;border:none;background:var(--neg);color:#fff;width:30px;height:30px;border-radius:8px;cursor:pointer;flex:none;font-size:18px}
+.editing .row .del{display:block}
+.editing .row .amt,.editing .row .add{display:none}
+.hd-btn{margin-left:10px;border:1px solid color-mix(in srgb,var(--head-fg) 35%,transparent);background:none;color:var(--head-fg);border-radius:8px;
+  padding:0 10px;min-height:32px;font-family:var(--sans);font-size:13px;font-weight:600;letter-spacing:0;text-transform:none;cursor:pointer}
+.editing .hd-btn{background:var(--sig);border-color:var(--sig);color:#101418}
+.row .rename{flex:1;min-width:0;height:42px;border:1px solid var(--field);border-radius:8px;background:var(--soft);padding:0 10px;outline:none;
+  text-align:left;font-family:var(--sans);font-size:15px;font-weight:500;color:var(--ink)}
+.row .rename:focus{border-color:var(--ink);box-shadow:0 0 0 3px var(--sig)}
+.row .name > span{display:block;overflow:hidden;text-overflow:ellipsis}
+.row .name small{display:block;font-size:12px;font-weight:600;color:var(--muted)}
+#card-out .row .amt{width:122px}
+.row .amt.locked{background:transparent;border-style:dashed;cursor:pointer}
+.row .amt.locked input{cursor:pointer}
+.row .add{flex:none;width:42px;height:42px;border-radius:8px;border:1px solid var(--field);background:var(--card);font-size:22px;font-weight:600;line-height:1;cursor:pointer}
+.row .add.has{background:var(--sig);border-color:var(--sig);color:#101418}
+.items{margin:-4px 0 0}
+.item{display:flex;align-items:center;gap:10px;min-height:48px;border-top:1px solid var(--line)}
+.item:first-child{border-top:none}
+.item span{flex:1;min-width:0;font-size:15px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.item b{font-family:var(--num);font-weight:600;font-size:19px}
+.item button{flex:none;border:none;background:none;color:var(--neg-text);font-size:22px;width:32px;height:32px;cursor:pointer}
+.item span small{display:block;font-size:12px;font-weight:600;color:var(--muted)}
+.item.gl{cursor:pointer}
+#card-gl .btn{width:100%;margin-top:12px}
+.hero .gl{margin-top:8px;font-size:13px;font-weight:600;color:var(--neg-text)}
+.sheet label select{display:block;width:100%;margin-top:6px;height:48px;border:1px solid var(--field);background:var(--soft);border-radius:10px;
+  padding:0 12px;font-size:16px;font-weight:500;letter-spacing:0;color:var(--ink);outline:none}
+.sheet label select:focus{border-color:var(--ink);box-shadow:0 0 0 3px var(--sig)}
+.additem{display:flex;gap:8px;margin-top:16px}
+.sheet .additem label{flex:1;margin-bottom:8px}
+.additem{align-items:flex-end}
+.sheet .additem .a{flex:0 0 136px;margin-bottom:8px}
+.subtotal{display:flex;justify-content:space-between;align-items:center;padding-top:12px;margin-top:2px;border-top:2px solid var(--ink);font-weight:700}
+.subtotal span:last-child{font-family:var(--num);font-size:20px;background:var(--sig);color:#101418;padding:2px 10px;border-radius:6px}
+
+.actions{display:flex;gap:10px;margin:0 0 14px;flex-wrap:wrap}
+.btn{border:1px solid var(--field);background:var(--card);border-radius:10px;padding:0 14px;min-height:46px;cursor:pointer;font-size:14px;font-weight:600}
+.btn.primary{background:var(--ink);color:var(--card);border-color:var(--ink);font-weight:700}
+.btn.danger{color:var(--neg-text);border:2px solid var(--neg)}
+.btn.grow{flex:1}
+.actions #copyNext{flex-basis:100%;min-height:50px;background:var(--ink);color:var(--card);border-color:var(--ink)}
+.actions .btn:not(#copyNext){flex:1}
+
+/* Graphique + tableau des départs */
+#chart svg{width:100%;height:auto;display:block}
+.legend{display:flex;align-items:center;gap:6px;margin:6px 0 0;font-size:12px;color:var(--muted)}
+.legend i{width:14px;height:14px;border-radius:3px;background:repeating-linear-gradient(45deg,color-mix(in srgb,var(--neg) 35%,transparent) 0 3px,transparent 3px 6px)}
+.totals{margin:14px -16px -16px;padding:6px 16px 10px;background:var(--board)}
+.totals .tt{margin:8px 0 2px;font-family:var(--num);font-weight:700;font-size:15px;letter-spacing:.06em;text-transform:uppercase;color:#fff}
+.totals div{display:flex;align-items:baseline;gap:12px;padding:8px 0;border-top:1px solid rgba(255,255,255,.1)}
+.totals .tt + div{border-top:none}
+.totals span{font-size:13px;color:var(--board-sub)}
+.totals b{font-family:var(--num);font-weight:600;font-size:20px;color:var(--board-fg);margin-left:auto}
+.totals i{font-style:normal;font-family:var(--num);font-size:15px;color:var(--board-sub);min-width:64px;text-align:right}
+.totals .fin span{color:#fff;font-weight:700}
+.totals .fin b{font-size:28px;font-weight:700;color:var(--sig)}
+.totals .fin b.n{color:#FF7C80}
+
+.field{display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:58px;border-top:1px solid var(--line)}
+.card h2 + .field{border-top:none}
+.field label{font-size:15px}
+.field .amt{width:150px}
+
+/* Carte */
+.search{display:flex;gap:8px;margin:16px 0 10px}
+.search input{flex:1;min-width:0;height:50px;border:1px solid var(--line);border-bottom:2px solid var(--ink);background:var(--card);border-radius:10px;padding:0 14px;outline:none;font-size:16px;font-weight:500}
+.search input:focus{box-shadow:0 0 0 3px var(--sig)}
+.search .btn{min-height:50px}
+#results{margin-bottom:10px}
+#results:empty{display:none}
+.result{display:block;width:100%;text-align:left;border:none;border-top:1px solid var(--line);background:none;padding:12px 4px;cursor:pointer;font-size:15px;font-weight:600}
+.result:first-child{border-top:none}
+.result small{display:block;font-weight:400;color:var(--muted);font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#map{height:52vh;min-height:300px;border-radius:14px;border:1px solid var(--line);overflow:hidden;z-index:1;background:var(--card)}
+.hint{font-size:12px;color:var(--muted);text-align:center;margin:8px 0 14px}
+.filters{display:flex;margin:-16px -16px 8px;align-items:stretch;border-bottom:1px solid var(--line)}
+.chip{flex:none;border:none;border-right:1px solid var(--line);background:var(--card);padding:0 16px;min-height:48px;font-size:14px;cursor:pointer}
+.chip.on{background:var(--ink);color:var(--card);font-weight:700}
+.filters .count{margin-left:auto;padding:0 16px;display:flex;align-items:center;font-family:var(--num);font-weight:700;font-size:20px}
+.poi{display:flex;gap:12px;align-items:center;padding:12px 0;border-top:1px solid var(--line);cursor:pointer}
+.poi:first-child{border-top:none}
+/* classement par ville : chaque ville est un panneau de station */
+.city-group + .city-group{margin-top:18px}
+.city-head{display:flex;align-items:baseline;gap:10px;width:100%;border:none;border-bottom:3px solid var(--rail);background:none;color:var(--ink);
+  padding:4px 0 6px;cursor:pointer;text-align:left}
+.city-head b{font-family:var(--num);font-weight:700;font-size:19px;letter-spacing:.04em;text-transform:uppercase}
+.city-head span{margin-left:auto;font-size:12px;color:var(--muted);white-space:nowrap}
+.city-head span em{font-style:normal;color:var(--pos);font-weight:600}
+.city-head + .poi{border-top:none}
+.poi .g{flex:none;width:40px;height:40px;border-radius:10px;border:4px solid var(--c);background:#fff;color:var(--c);display:grid;place-items:center;
+  font-family:var(--jp);font-weight:800;font-size:18px}
+.poi.done .g{background:var(--c);color:#fff}
+.poi .t{flex:1;min-width:0}
+.poi .t b{display:block;font-size:15px;font-weight:600}
+.poi .t span{font-size:12px;color:var(--muted)}
+.poi.done .t span{color:var(--pos);font-weight:600}
+.poi .t p{margin:4px 0 0;font-size:13px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.poi .addr{display:block;font-size:12px;color:var(--muted);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.poi .links{display:flex;flex-wrap:wrap;gap:2px 14px;margin-top:2px}
+.poi .plans,.home-row .links a{color:var(--ink);font-size:12px;font-weight:600;text-decoration:underline;padding:4px 0 0}
+.home-row .links a{font-size:13px;padding:4px 0}
+.poi .pcopy{border:none;background:none;padding:4px 0 0;color:var(--ink);font-size:12px;font-weight:600;text-decoration:underline;cursor:pointer}
+.poi .pcopy.ok{color:var(--pos);text-decoration:none}
+.poi .edit{border:1px solid var(--field);background:var(--card);border-radius:8px;padding:0 12px;min-height:36px;cursor:pointer;font-size:13px;font-weight:600}
+.empty{text-align:center;color:var(--muted);font-size:14px;padding:18px 8px}
+/* recherche + filtres des listes */
+.list-tools{display:flex;flex-direction:column;gap:8px;margin:0 0 6px}
+.list-tools input[type=search]{width:100%;height:44px;border:1px solid var(--field);background:var(--soft);border-radius:10px;padding:0 12px;outline:none;font-size:16px;color:var(--ink)}
+.list-tools input[type=search]:focus{border-color:var(--ink);box-shadow:0 0 0 3px var(--sig)}
+.list-tools .sel{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.list-tools select{width:100%;min-width:0;height:44px;border:1px solid var(--field);background:var(--card);border-radius:10px;padding:0 10px;font-size:15px;color:var(--ink)}
+.list-tools select.on,.list-tools .cities-btn.on{border:2px solid var(--ink);font-weight:600}
+.cities-btn{width:100%;min-width:0;height:44px;border:1px solid var(--field);background:var(--card);border-radius:10px;padding:0 28px 0 10px;font-size:15px;color:var(--ink);
+  text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer;position:relative}
+.cities-btn::after{content:"";position:absolute;right:12px;top:50%;width:7px;height:7px;border:solid currentColor;border-width:0 2px 2px 0;transform:translateY(-70%) rotate(45deg)}
+.sheet .citylist label.check{margin-bottom:6px;min-height:44px}
+.citylist label.check span{flex:1}
+.citylist label.check small{color:var(--muted);font-weight:500}
+.type-head{display:flex;align-items:center;gap:6px;margin:10px 0 0;font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--c)}
+.type-head + .poi{border-top:none}
+/* export au choix */
+.sheet .parts label.check{margin-bottom:6px}
+.copybox{width:100%;height:160px;font:12px/1.4 ui-monospace,Menlo,monospace;border:1px solid var(--field);border-radius:10px;padding:10px;background:var(--soft);color:var(--ink);margin:0 0 10px}
+.note-ok{font-size:13px;font-weight:600;color:var(--pos);margin:0 0 10px}
+.note-err{font-size:13px;font-weight:600;color:var(--neg-text);margin:0 0 10px}
+.parts label.check span{flex:1}
+.parts label.check small{display:block;font-size:12px;font-weight:400;color:var(--muted)}
+/* Wishlist : même ligne que les points, la case kanji se coche */
+.poi.wish{cursor:default}
+.poi.wish .g{padding:0;cursor:pointer}
+.poi.wish.done .t b{text-decoration:line-through;color:var(--muted)}
+.poi .price{flex:none;font-family:var(--num);font-weight:700;font-size:17px;white-space:nowrap}
+.poi.wish.done .price{color:var(--muted);text-decoration:line-through}
+#wishFilters .chip{padding:0 14px}
+#filters em,#wishFilters em{font-style:normal;font-family:var(--num);font-weight:700;margin-left:2px}
+#wishAdd{width:100%;min-height:50px;margin:0 0 14px}
+#wishList + .subtotal{margin-top:10px}
+#wishTotal[hidden]{display:none}
+
+/* Marqueurs — numérotation de station */
+.pin{width:32px;height:32px;border-radius:9px;border:4px solid var(--c);background:#fff;color:var(--c);display:grid;place-items:center;
+  font-family:var(--jp);font-weight:800;font-size:14px;box-shadow:0 2px 6px rgba(0,0,0,.35)}
+.pin.done{background:var(--c);color:#fff}
+/* Logement : la maison, en noir, toujours au-dessus des points */
+.pin.home{--c:var(--sig);width:38px;height:38px;border-radius:50%;background:#101418;color:#fff;font-size:16px}
+#homeCard{padding:4px 16px 12px}
+.home-row{display:flex;align-items:center;gap:12px;padding:10px 0;border-top:1px solid var(--line)}
+.home-row:first-child{border-top:none}
+.home-row .g,.home-set .g{flex:none;width:40px;height:40px;border-radius:50%;background:#101418;color:#fff;border:4px solid var(--sig);display:grid;place-items:center;
+  font-family:var(--jp);font-weight:800;font-size:17px}
+.home-row .t{flex:1;min-width:0}
+.home-row .t b{display:block;font-size:15px;font-weight:700}
+.home-row .t span{display:block;font-size:13px;color:var(--muted);white-space:pre-line}
+.home-row .t span.warn{color:var(--neg-text);font-weight:600;font-size:12px}
+.home-row .links{display:flex;flex-wrap:wrap;gap:4px 14px;margin-top:4px}
+.home-row .links button{border:none;background:none;padding:4px 0;color:var(--ink);font-size:13px;font-weight:600;text-decoration:underline;cursor:pointer}
+.home-row .links button.ok{color:var(--pos);text-decoration:none}
+.home-add{width:100%;margin-top:6px}
+.home-set{display:flex;align-items:center;gap:12px;width:100%;border:none;background:none;padding:8px 0 0;cursor:pointer;text-align:left;color:var(--ink)}
+.home-set b{display:block;font-size:15px}
+.home-set small{display:block;font-size:12px;color:var(--muted)}
+.placing{display:flex;align-items:center;gap:10px;margin:0 0 8px;padding:10px 12px;border-radius:10px;background:var(--sig);color:#101418;font-size:14px;font-weight:600}
+.placing[hidden]{display:none}
+.placing button{margin-left:auto;border:none;background:#101418;color:#fff;border-radius:8px;padding:0 12px;min-height:36px;font-weight:600;cursor:pointer}
+.home-pos{margin:-4px 0 14px;font-size:13px;color:var(--muted)}
+.home-pos.ok{color:var(--pos);font-weight:600}
+.home-pos.err{color:var(--neg-text);font-weight:600}
+.leaflet-container{font-family:var(--sans)}
+
+/* Barre d'onglets */
+.tabbar{position:fixed;left:50%;transform:translateX(-50%);bottom:0;z-index:900;display:flex;width:min(480px,100%);
+  background:var(--card);border-top:1px solid var(--line);padding:0 0 env(safe-area-inset-bottom)}
+.tabbar button{flex:1;position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;border:none;background:none;
+  color:var(--muted);min-height:64px;cursor:pointer;font-size:12px;font-weight:500}
+.tabbar button.on{color:var(--ink);font-weight:700}
+.tabbar button.on::before{content:"";position:absolute;top:0;left:30%;right:30%;height:4px;border-radius:0 0 3px 3px;background:var(--sig)}
+.tabbar button.on svg{color:var(--rail)}
+.tabbar svg{width:24px;height:24px}
+
+/* Panneaux du bas */
+.backdrop{position:fixed;inset:0;z-index:1000;background:rgba(16,20,24,.5);display:flex;align-items:flex-end;justify-content:center;
+  opacity:0;pointer-events:none;transition:opacity .2s}
+.backdrop.open{opacity:1;pointer-events:auto}
+.sheet{width:100%;max-width:480px;background:var(--card);border-radius:18px 18px 0 0;padding:10px 16px calc(18px + env(safe-area-inset-bottom));
+  max-height:88dvh;overflow:auto;transform:translateY(30px);transition:transform .25s}
+.backdrop.open .sheet{transform:none}
+.sheet::before{content:"";display:block;width:40px;height:5px;border-radius:4px;background:var(--field);margin:0 auto 12px}
+.sheet h3{margin:0 -16px 16px;padding:0 16px 12px;font-family:var(--num);font-weight:700;font-size:26px;line-height:1.1;border-bottom:6px solid var(--rail)}
+.sheet label{display:block;font-size:12px;font-weight:600;letter-spacing:.04em;color:var(--muted);margin-bottom:14px}
+.sheet label input:not([type=checkbox]),.sheet textarea{display:block;width:100%;margin-top:6px;border:1px solid var(--field);background:var(--soft);border-radius:10px;
+  padding:12px 14px;outline:none;font-size:16px;font-weight:500;letter-spacing:0;color:var(--ink);resize:vertical}
+.sheet label input:focus,.sheet textarea:focus{border-color:var(--ink);box-shadow:0 0 0 3px var(--sig)}
+.sheet .seg{display:flex;gap:6px;margin-bottom:14px}
+.sheet .seg button{flex:1}
+.sheet .seg button.on{background:var(--ink);color:var(--card);border-color:var(--ink)}
+.sheet label.check{display:flex;align-items:center;gap:12px;min-height:48px;padding:0 14px;border-radius:10px;background:var(--bg);color:var(--ink);font-size:15px;letter-spacing:0}
+.sheet label.check input{width:22px;height:22px;margin:0;accent-color:var(--rail)}
+/* choix des lignes à copier sur les mois suivants */
+.pick-head{display:flex;align-items:center;justify-content:space-between;margin:4px 0 6px}
+.pick-head .small-label{margin:0}
+.pick-head button{border:none;background:none;color:var(--ink);font-size:13px;font-weight:600;text-decoration:underline;cursor:pointer;padding:6px 0 6px 12px}
+.sheet .picklist label.check{margin-bottom:6px;min-height:44px}
+.picklist label.check span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.picklist label.check b{font-family:var(--num);font-weight:700;font-size:16px;white-space:nowrap}
+.picklist label.check.zero b{color:var(--muted);font-weight:500}
+.catpick{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:6px 0 14px}
+.catpick button{display:flex;align-items:center;gap:8px;min-height:46px;padding:0 8px;border:1px solid var(--field);background:var(--card);border-radius:10px;cursor:pointer;font-size:14px;font-weight:600}
+.catpick button b{width:24px;height:24px;flex:none;border-radius:6px;background:var(--c);color:#fff;display:grid;place-items:center;font-family:var(--jp);font-weight:800;font-size:12px}
+.catpick button.on{background:var(--c);border-color:var(--c);color:#fff}
+.catpick button.on b{background:#fff;color:var(--c)}
+.sheet-actions{display:flex;gap:8px;margin-top:8px;flex-wrap:wrap}
+.sheet .menu-item{display:block;width:100%;text-align:left;margin-bottom:8px;padding:10px 14px;min-height:56px}
+.sheet .menu-item small{display:block;color:var(--muted);font-size:12px;font-weight:400}
+.small-label{font-size:13px;color:var(--muted)}
+.sheet .small-label{font-size:12px;font-weight:600;letter-spacing:.04em}
+
+/* Aperçu téléphone : l'app dans un cadre 390×844 ; le transform du cadre y contient les éléments fixed */
+.top .btns{display:flex;gap:8px}
+#phoneBtn,#fondBtn{display:grid;place-items:center}
+#phoneBtn svg,#fondBtn svg{width:20px;height:20px}
+#phoneBtn.on{background:var(--sig);border-color:var(--sig);color:#101418}
+@media (max-width:600px){#phoneBtn{display:none}}
+.device,.screen{display:contents}
+.statusbar,.homebar{display:none}
+body.phone{height:100vh;display:grid;place-items:center;overflow:hidden;background:#1B1F24}
+body.phone .device{display:block;position:relative;flex:none;width:414px;height:868px;border:12px solid #0A0C0E;border-radius:56px;overflow:hidden;
+  background:var(--bg);transform:scale(var(--s,1));margin:calc(434px * (var(--s,1) - 1)) calc(207px * (var(--s,1) - 1));box-shadow:0 0 0 2px #3A4048,0 30px 80px rgba(0,0,0,.5)}
+body.phone .statusbar{display:flex;position:absolute;top:0;left:0;right:0;height:46px;z-index:950;align-items:center;justify-content:space-between;
+  padding:4px 30px 0;background:var(--card);color:var(--ink);font-weight:600;font-size:15px}
+.statusbar .island{position:absolute;top:10px;left:50%;width:112px;height:32px;border-radius:20px;background:#000;transform:translateX(-50%)}
+.statusbar svg{height:12px;display:block}
+.statusbar .ic{display:flex;gap:6px;align-items:center}
+body.phone .screen{display:block;position:absolute;top:46px;left:0;right:0;bottom:0;overflow-y:auto;overflow-x:hidden;scrollbar-width:none}
+body.phone .screen::-webkit-scrollbar{display:none}
+body.phone .app{min-height:100%;padding-bottom:110px}
+body.phone .top{padding-top:8px}
+body.phone .tabbar{padding-bottom:24px}
+body.phone #map{height:420px}
+body.phone .sheet{max-height:88%;padding-bottom:36px}
+body.phone .homebar{display:block;position:absolute;bottom:8px;left:50%;width:134px;height:5px;border-radius:3px;background:var(--ink);transform:translateX(-50%);z-index:1100;pointer-events:none}
+</style>
+
+</head>
+<body>
+<div class="device" id="device">
+<div class="statusbar" aria-hidden="true">
+  <span>9:41</span><span class="island"></span>
+  <span class="ic">
+    <svg viewBox="0 0 18 12" fill="currentColor"><rect x="0" y="8" width="3" height="4" rx="1"/><rect x="5" y="5" width="3" height="7" rx="1"/><rect x="10" y="2.5" width="3" height="9.5" rx="1"/><rect x="15" y="0" width="3" height="12" rx="1"/></svg>
+    <svg viewBox="0 0 27 12" fill="none" stroke="currentColor"><rect x=".5" y=".5" width="22" height="11" rx="3" opacity=".4"/><rect x="2" y="2" width="19" height="8" rx="1.5" fill="currentColor" stroke="none"/><path d="M24.5 4v4" stroke-width="1.5" stroke-linecap="round" opacity=".4"/></svg>
+  </span>
+</div>
+<div class="screen" id="screen">
+<div class="app">
+  <header class="top">
+    <div class="brand">
+      <div class="logo" aria-hidden="true"><span>PVT</span><b>JP</b></div>
+      <div><h1>PVT Japon</h1><p id="subtitle">Budget</p></div>
+    </div>
+    <div class="btns">
+      <button class="icon-btn" id="fondBtn" aria-label="Fond noir ou blanc"></button>
+      <button class="icon-btn" id="phoneBtn" aria-label="Aperçu téléphone" aria-pressed="false" title="Aperçu téléphone">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="6" y="2" width="12" height="20" rx="3"/><path d="M10.5 18.5h3"/></svg>
+      </button>
+      <button class="icon-btn" id="menuBtn" aria-label="Sauvegarde">⋯</button>
+    </div>
+  </header>
+
+  <main>
+    <section class="tab active" id="tab-budget">
+      <nav class="months" id="months" aria-label="Mois"></nav>
+      <div class="card hero" id="hero"></div>
+      <div class="card" id="card-in"><h2>Revenus <span><small>収入</small><button class="hd-btn" data-edit-lines>Modifier</button></span></h2><div id="rows-in"></div></div>
+      <div class="card" id="card-out"><h2>Dépenses <span><small>支出</small><button class="hd-btn" data-edit-lines>Modifier</button></span></h2><div id="rows-out"></div></div>
+      <div class="actions">
+        <button class="btn grow" id="copyNext">Copier ce mois sur les suivants</button>
+        <button class="btn" id="addLine">+ Ligne</button>
+      </div>
+      <div class="card" id="card-gl"><h2>Dépenses globales <small>一括</small></h2><div id="rows-gl"></div></div>
+      <div class="card">
+        <h2>Épargne sur l'année <small id="chartCur">en ¥</small></h2>
+        <div id="chart"></div>
+        <p class="legend"><i></i>Mois en négatif</p>
+        <div class="totals" id="totals"></div>
+      </div>
+      <div class="card">
+        <h2>Réglages <small>設定</small></h2>
+        <div class="field"><label for="start">Épargne au départ</label><div class="amt"><input id="start" inputmode="numeric"><button class="unit" id="startUnit" aria-label="Changer de devise">¥</button></div></div>
+        <div class="field"><label for="rate">Taux de change · 1 € =</label><div class="amt"><input id="rate" inputmode="decimal"><span class="small-label">¥</span></div></div>
+      </div>
+    </section>
+
+    <section class="tab" id="tab-map">
+      <form class="search" id="searchForm">
+        <input id="q" placeholder="Chercher un lieu (ex. Fushimi Inari)" autocomplete="off">
+        <button class="btn primary" type="submit">OK</button>
+      </form>
+      <div class="card" id="results" style="padding:4px 12px"></div>
+      <div class="card" id="homeCard"></div>
+      <div class="placing" id="placing" hidden>Touche la carte à l'emplacement exact du logement<button type="button" id="placingCancel">Annuler</button></div>
+      <div id="map"></div>
+      <p class="hint">Touche la carte pour ajouter un point d'intérêt.</p>
+      <div class="card">
+        <div class="filters" id="filters">
+          <button class="chip on" data-f="all">Tous</button>
+          <button class="chip" data-f="done">Visités <em id="count"></em></button>
+        </div>
+        <div class="list-tools">
+          <input type="search" id="poiSearch" placeholder="Rechercher dans mes lieux…" autocomplete="off" aria-label="Rechercher dans mes lieux">
+          <div class="sel"><button type="button" class="cities-btn" id="fCity">Toutes les villes</button><select id="fCat" aria-label="Type"></select></div>
+        </div>
+        <div id="poiList"></div>
+      </div>
+    </section>
+
+    <section class="tab" id="tab-wish">
+      <button class="btn primary" id="wishAdd">+ Ajouter une envie</button>
+      <div class="card">
+        <h2>Mes envies <small>やりたい・欲しい</small></h2>
+        <div class="filters" id="wishFilters" style="margin-top:-12px">
+          <button class="chip on" data-w="all">Tout</button>
+          <button class="chip" data-w="faire">À faire</button>
+          <button class="chip" data-w="acheter">À acheter</button>
+          <button class="chip" data-w="done">Fait <em id="wishCount"></em></button>
+        </div>
+        <div class="list-tools"><input type="search" id="wishSearch" placeholder="Rechercher une envie…" autocomplete="off" aria-label="Rechercher une envie"></div>
+        <div id="wishList"></div>
+        <div class="subtotal" id="wishTotal" hidden><span>Reste à prévoir</span><span></span></div>
+      </div>
+    </section>
+  </main>
+
+  <nav class="tabbar">
+    <button class="on" data-tab="budget">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M8.5 7.5 12 12l3.5-4.5M12 12v5M9 12.5h6M9 15h6"/></svg>
+      Budget
+    </button>
+    <button data-tab="map">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7-6.2-7-11.5a7 7 0 0 1 14 0C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/></svg>
+      Centres d'intérêt
+    </button>
+    <button data-tab="wish">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3 2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1-4.4-4.3 6.1-.9z"/></svg>
+      Wishlist
+    </button>
+  </nav>
+</div>
+</div>
+
+<div class="backdrop" id="backdrop"><div class="sheet" id="sheet"></div></div>
+<div class="homebar"></div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+const MONTHS = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
+const SHORT  = ['Janv','Févr','Mars','Avr','Mai','Juin','Juil','Août','Sept','Oct','Nov','Déc'];
+const KANJI  = ['一月','二月','三月','四月','五月','六月','七月','八月','九月','十月','十一月','十二月'];
+const CATS = {
+  temple:{label:'Temple',  color:'#D2232A', glyph:'寺'},
+  nature:{label:'Nature',  color:'#1A8A3F', glyph:'山'},
+  food:  {label:'Food',    color:'#C55A00', glyph:'食'},
+  ville: {label:'Ville',   color:'#0067C0', glyph:'街'},
+  onsen: {label:'Onsen',   color:'#8E3FAF', glyph:'湯'},
+  autre: {label:'Autre',   color:'#5A6270', glyph:'点'}
+};
+// villes de référence : rattachement automatique des points (et noms sur la carte de la version en ligne)
+// [nom, lat, lng, grande ville]
+const CITIES = [
+  ['Tokyo', 35.6812, 139.7671, 1], ['Osaka', 34.6937, 135.5023, 1], ['Kyoto', 35.0116, 135.7681, 1],
+  ['Sapporo', 43.0618, 141.3545, 1], ['Fukuoka', 33.5902, 130.4017, 1], ['Nagoya', 35.1815, 136.9066, 1],
+  ['Sendai', 38.2682, 140.8694, 1], ['Hiroshima', 34.3853, 132.4553, 1], ['Naha', 26.2124, 127.6809, 1],
+  ['Niigata', 37.9161, 139.0364, 1], ['Kagoshima', 31.5966, 130.5571, 1], ['Kanazawa', 36.5613, 136.6562, 1],
+  ['Aomori', 40.8244, 140.7400, 1],
+  ['Yokohama', 35.4437, 139.6380, 0], ['Kobe', 34.6901, 135.1955, 0], ['Nara', 34.6851, 135.8048, 0],
+  ['Kamakura', 35.3192, 139.5467, 0], ['Hakone', 35.2324, 139.1069, 0], ['Nikko', 36.7199, 139.6982, 0],
+  ['Fujikawaguchiko', 35.4983, 138.7686, 0], ['Nagano', 36.6485, 138.1942, 0], ['Matsumoto', 36.2380, 137.9720, 0],
+  ['Takayama', 36.1461, 137.2522, 0], ['Shizuoka', 34.9756, 138.3828, 0], ['Himeji', 34.8151, 134.6853, 0],
+  ['Okayama', 34.6551, 133.9195, 0], ['Matsuyama', 33.8392, 132.7657, 0], ['Kumamoto', 32.8031, 130.7079, 0],
+  ['Nagasaki', 32.7503, 129.8779, 0], ['Hakodate', 41.7687, 140.7288, 0], ['Otaru', 43.1907, 140.9947, 0],
+  ['Beppu', 33.2846, 131.4914, 0], ['Takamatsu', 34.3428, 134.0466, 0], ['Kochi', 33.5597, 133.5311, 0],
+  ['Morioka', 39.7036, 141.1527, 0], ['Akita', 39.7200, 140.1025, 0], ['Asahikawa', 43.7706, 142.3650, 0],
+  ['Ise', 34.4875, 136.7093, 0], ['Wakayama', 34.2260, 135.1675, 0], ['Toyama', 36.6953, 137.2113, 0],
+  ['Fukushima', 37.7608, 140.4747, 0], ['Kushiro', 42.9849, 144.3820, 0], ['Miyazaki', 31.9077, 131.4202, 0],
+  ['Ishigaki', 24.3448, 124.1572, 0]
+];
+function nearestCity(lat, lng){
+  let best = CITIES[0], bd = Infinity;
+  for (const c of CITIES){
+    const dx = (c[2] - lng) * Math.cos(lat * Math.PI / 180), dy = c[1] - lat, d = dx * dx + dy * dy;
+    if (d < bd){ bd = d; best = c; }
+  }
+  return best[0];
+}
+const cityOf = p => (p.city || '').trim() || nearestCity(p.lat, p.lng);
+
+const KEY = 'pvt-japon-v1';
+
+const defaults = () => ({
+  rate:160, start:0,
+  cats:[
+    {id:'in1', name:'Salaire (baito)', type:'in'},
+    {id:'in2', name:'Autres revenus', type:'in'},
+    {id:'o1', name:'Loyer', type:'out'},
+    {id:'o2', name:'Courses & repas', type:'out'},
+    {id:'o3', name:'Transports', type:'out'},
+    {id:'o4', name:'Téléphone & internet', type:'out'},
+    {id:'o5', name:'Assurance santé', type:'out'},
+    {id:'o6', name:'Sorties & loisirs', type:'out'},
+    {id:'o7', name:'Voyages', type:'out'},
+    {id:'o8', name:'Divers', type:'out'}
+  ],
+  vals:{}, globals:[], pois:[], wishes:[], homes:[]
+});
+
+let state;
+try { state = JSON.parse(localStorage.getItem(KEY)) || defaults(); } catch(e) { state = defaults(); }
+state.globals ||= [];
+state.wishes ||= [];
+// un seul logement avant : on le passe dans la liste
+if (state.home){ state.homes = [{id:'h1', ...state.home}]; delete state.home; }
+state.homes ||= [];
+function save(){ try { localStorage.setItem(KEY, JSON.stringify(state)); } catch(e) {} }
+
+let month = 0, editing = false;
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const uid = () => Math.random().toString(36).slice(2, 10);
+const fold = s => String(s ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();   // recherche sans accents ni majuscules
+const byName = (a, b) => a.localeCompare(b, 'fr', {sensitivity:'base'});
+const round = n => Math.sign(n) * Math.round(Math.abs(n)) || 0; // même arrondi pour -445,5 et 445,5
+const yen = n => round(n).toLocaleString('fr-FR') + ' ¥';
+const eur = n => round(n / (state.rate || 1)).toLocaleString('fr-FR') + ' €';
+const parse = s => parseInt(String(s).replace(/[^\d-]/g, ''), 10) || 0;
+// les montants sont toujours stockés en ¥ ; state.cur choisit la devise affichée et saisie
+// chaque ligne / achat peut aussi être saisi dans sa propre devise (state.lineCur, it.cur + it.orig en €)
+const isEur = () => state.cur === 'EUR';
+const curNow = () => isEur() ? 'EUR' : 'JPY';
+const symOf = c => c === 'EUR' ? '€' : '¥';
+const modeOf = c => c === 'EUR' ? 'decimal' : 'numeric';
+const fmtCur = (n, c) => c === 'EUR' ? eur(n) : yen(n);
+const sym = () => symOf(curNow());
+const money = n => fmtCur(n, curNow());
+const alt = n => isEur() ? yen(n) : eur(n);
+const eurNum = s => { const n = parseFloat(String(s).replace(/[\s ]/g, '').replace(',', '.')); return isNaN(n) ? 0 : n; };
+const eurStr = n => n.toLocaleString('fr-FR', {maximumFractionDigits:2});
+const toInput = (v, c = curNow()) => !v ? '' : c === 'EUR' ? eurStr(v / state.rate) : Math.round(v).toLocaleString('fr-FR');
+const fromInput = (s, c = curNow()) => c === 'EUR' ? eurNum(s) * state.rate : parse(s);
+const rowCur = id => state.lineCur?.[id] || curNow();
+// épargne de départ : sa propre devise ; en € elle reste fixe (state.startEur) et suit le taux de change
+const startCur = () => state.startCur || curNow();
+const startInput = () => startCur() === 'EUR' && state.startEur != null ? eurStr(state.startEur) : toInput(state.start, startCur());
+// montant tel qu'il a été saisi (45,50 € reste 45,50 € même si le taux change ensuite)
+const fmtEntry = it => it.cur === 'EUR' && it.orig ? eurStr(it.orig) + ' €' : it.cur === 'JPY' ? yen(it.amount) : money(it.amount);
+const curPick = c => `<span class="curpick" role="group" aria-label="Devise"><button type="button" data-c="JPY" class="${c === 'JPY' ? 'on' : ''}">¥</button><button type="button" data-c="EUR" class="${c === 'EUR' ? 'on' : ''}">€</button></span>`;
+function bindCurPick(el, input, set){
+  el.querySelectorAll('.curpick [data-c]').forEach(b => b.onclick = () => {
+    el.querySelectorAll('.curpick [data-c]').forEach(x => x.classList.toggle('on', x === b));
+    input.inputMode = modeOf(b.dataset.c); set(b.dataset.c); input.focus();
+  });
+}
+
+/* ---------- Budget ---------- */
+const val = (id, m) => (state.vals[id] || [])[m] || 0;
+function setVal(id, m, v){ (state.vals[id] ||= Array(12).fill(0))[m] = v; }
+const items = (id, m) => state.items?.[id]?.[m] || [];
+function setItems(id, m, list){
+  ((state.items ||= {})[id] ||= Array.from({length:12}, () => []))[m] = list;
+  setVal(id, m, list.reduce((s, it) => s + it.amount, 0));
+}
+const sumType =(type, m) => state.cats.filter(c => c.type === type).reduce((s, c) => s + val(c.id, m), 0);
+const balance = m => sumType('in', m) - sumType('out', m);
+// dépenses globales : payées une fois, m = -1 pour « avant le départ »
+const globalsAt = m => (state.globals || []).filter(g => g.m === m).reduce((s, g) => s + g.amount, 0);
+const globalsTotal = () => (state.globals || []).reduce((s, g) => s + g.amount, 0);
+function cumul(){ let c = state.start - globalsAt(-1), out = []; for (let m = 0; m < 12; m++){ c += balance(m) - globalsAt(m); out.push(c); } return out; }
+
+function renderMonths(){
+  $('#months').innerHTML = SHORT.map((s, i) =>
+    `<button class="stn ${i === month ? 'on' : ''} ${balance(i) < 0 ? 'warn' : ''}" data-m="${i}" aria-label="${MONTHS[i]}${balance(i) < 0 ? ' (négatif)' : ''}"><span class="code">M${String(i + 1).padStart(2, '0')}</span><span class="nm">${s}</span></button>`).join('');
+  const box = $('#months'), on = box.querySelector('.on');
+  box.scrollLeft = on.offsetLeft - box.clientWidth / 2 + on.offsetWidth / 2;
+}
+
+function rowsHTML(type){
+  const cats = state.cats.filter(c => c.type === type);
+  return cats.map(c => {
+    const n = items(c.id, month).length, v = val(c.id, month), rc = rowCur(c.id);
+    return `
+    <div class="row">
+      <button class="del" data-del="${c.id}" aria-label="Supprimer">×</button>
+      ${editing ? `<input class="rename" data-rename="${c.id}" value="${esc(c.name)}" aria-label="Nom de la ligne">`
+        : `<span class="name" title="${esc(c.name)}"><span>${esc(c.name)}</span>${n ? `<small>${n} dépense${n > 1 ? 's' : ''}</small>` : ''}</span>`}
+      <div class="amt ${n ? 'locked' : ''}"><input data-id="${c.id}" ${n ? `readonly data-items="${c.id}"` : ''} inputmode="${modeOf(rc)}" placeholder="0" value="${toInput(v, rc)}"><button class="unit" data-unit="${c.id}" aria-label="Saisir en ${rc === 'EUR' ? 'yens' : 'euros'}">${symOf(rc)}</button></div>
+      ${type === 'out' ? `<button class="add ${n ? 'has' : ''}" data-items="${c.id}" aria-label="Détailler ${esc(c.name)}">+</button>` : ''}
+    </div>`;
+  }).join('') +`<div class="subtotal"><span>Total</span><span id="sub-${type}"></span></div>`;
+}
+
+function renderInputs(){
+  $('#rows-in').innerHTML = rowsHTML('in');
+  $('#rows-out').innerHTML = rowsHTML('out');
+  $('#start').value = state.start ? startInput() : '';
+  $('#start').inputMode = modeOf(startCur());
+  $('#startUnit').textContent = symOf(startCur());
+  $('#startUnit').setAttribute('aria-label', startCur() === 'EUR' ? 'Saisir en yens' : 'Saisir en euros');
+}
+
+function renderBudget(){
+  renderMonths();
+  renderInputs();
+  renderGlobals();
+  $('#rate').value = state.rate;
+  $('#chartCur').textContent = 'en ' + sym();
+  document.querySelectorAll('#card-in,#card-out').forEach(el => el.classList.toggle('editing', editing));
+  document.querySelectorAll('[data-edit-lines]').forEach(b => b.textContent = editing ? 'Terminé' : 'Modifier');
+  $('#copyNext').disabled = month === 11;
+  $('#copyNext').style.opacity = month === 11 ? .4 : 1;
+  renderSummary();
+}
+
+function renderSummary(){
+  const inc = sumType('in', month), out = sumType('out', month), bal = inc - out, cum = cumul();
+  $('#hero').innerHTML = `
+    <div class="in">
+      <div class="hd"><span class="month">${MONTHS[month].toUpperCase()}</span><span class="kj">${KANJI[month]}</span>
+        <span class="cur" role="group" aria-label="Devise"><button data-cur="JPY" class="${isEur() ? '' : 'on'}" aria-label="En yens">¥</button><button data-cur="EUR" class="${isEur() ? 'on' : ''}" aria-label="En euros">€</button></span></div>
+      <div class="lbl">SOLDE DU MOIS</div>
+      <div class="big ${bal < 0 ? 'neg' : ''}">${bal > 0 ? '+' : ''}${money(bal)}</div>
+      <div class="eur">≈ ${bal > 0 ? '+' : ''}${alt(bal)}</div>
+      ${globalsAt(month) ? `<div class="gl">− ${money(globalsAt(month))} de dépenses globales ce mois-ci</div>` : ''}
+    </div>
+    <div class="bar ${bal < 0 ? 'neg' : ''}"></div>
+    <div class="nav">${month > 0 ? `<button data-m="${month - 1}">‹ ${SHORT[month - 1]}</button>` : '<span></span>'}${month < 11 ? `<button data-m="${month + 1}">${SHORT[month + 1]} ›</button>` : '<span></span>'}</div>
+    <div class="grid">
+      <div><span>Revenus</span><b>${money(inc)}</b></div>
+      <div><span>Dépenses</span><b>${money(out)}</b></div>
+      <div><span>Épargne fin de mois</span><b class="${cum[month] < 0 ? 'n' : 'p'}">${money(cum[month])}</b></div>
+    </div>`;
+  $('#sub-in').textContent = money(inc);
+  $('#sub-out').textContent = money(out);
+  document.querySelectorAll('#months .stn').forEach((c, i) => c.classList.toggle('warn', balance(i) < 0));
+  renderChart(cum);
+  let ti = 0, to = 0; for (let m = 0; m < 12; m++){ ti += sumType('in', m); to += sumType('out', m); }
+  $('#totals').innerHTML = `
+    <p class="tt">Totaux annuels</p>
+    <div><span>Revenus</span><b>${money(ti)}</b><i>${alt(ti)}</i></div>
+    <div><span>Dépenses</span><b>${money(to)}</b><i>${alt(to)}</i></div>
+    <div><span>Dépenses globales</span><b>${money(globalsTotal())}</b><i>${alt(globalsTotal())}</i></div>
+    <div class="fin"><span>Épargne finale</span><b class="${cum[11] < 0 ? 'n' : ''}">${money(cum[11])}</b><i>${alt(cum[11])}</i></div>`;
+}
+
+function renderChart(cum){
+  const W = 340, H = 160, pl = 12, pr = 12, pt = 28, pb = 26;
+  const pts = [state.start, ...cum];
+  const min = Math.min(0, ...pts), max = Math.max(1, ...pts);
+  const step = (W - pl - pr) / 11;
+  const x = i => pl + i * step;
+  const y = v => pt + (max - v) / (max - min || 1) * (H - pt - pb);
+  const line = cum.map((v, i) => `${i ? 'L' : 'M'}${x(i).toFixed(1)},${y(v).toFixed(1)}`).join('');
+  const base = y(Math.max(min, 0));
+  const area = `${line}L${x(11)},${base}L${x(0)},${base}Z`;
+  const sel = cum[month];
+  const lx = Math.min(Math.max(x(month), 40), W - 40);
+  const font = 'font-family="Barlow Semi Condensed, sans-serif"';
+  $('#chart').innerHTML = `
+    <svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Évolution de l'épargne — ${MONTHS[month]} : ${money(sel)}">
+      <defs>
+        <linearGradient id="g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="var(--rail)" stop-opacity=".22"/><stop offset="1" stop-color="var(--rail)" stop-opacity="0"/></linearGradient>
+        <pattern id="hatch" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="3" height="6" fill="var(--neg)" opacity=".2"/></pattern>
+      </defs>
+      ${cum.map((v, i) => balance(i) < 0 ? `<rect x="${(x(i) - step / 2).toFixed(1)}" y="${pt - 8}" width="${step.toFixed(1)}" height="${H - pb - pt + 8}" fill="url(#hatch)"/>` : '').join('')}
+      ${min < 0 ? `<line x1="${pl}" x2="${W - pr}" y1="${y(0)}" y2="${y(0)}" stroke="var(--neg)" stroke-dasharray="4 3" stroke-width="1.5"/>` : ''}
+      <path d="${area}" fill="url(#g)"/>
+      <path d="${line}" fill="none" stroke="var(--rail)" stroke-width="5" stroke-linejoin="round" stroke-linecap="round"/>
+      ${cum.map((v, i) => i === month ? '' : `<circle cx="${x(i)}" cy="${y(v)}" r="4" fill="var(--card)" stroke="${v < 0 ? 'var(--neg)' : 'var(--ink)'}" stroke-width="2"/>`).join('')}
+      <circle cx="${x(month)}" cy="${y(sel)}" r="9" fill="var(--sig)" stroke="var(--ink)" stroke-width="3"/>
+      <text x="${lx}" y="16" text-anchor="middle" ${font} font-size="15" font-weight="700" fill="var(--ink)">${money(sel)}</text>
+      ${SHORT.map((s, i) => `<text x="${x(i)}" y="${H - 6}" text-anchor="middle" ${font} font-size="12" font-weight="${i === month ? 700 : 600}" fill="${i === month ? 'var(--ink)' : 'var(--muted)'}">${String(i + 1).padStart(2, '0')}</text>`).join('')}
+      ${cum.map((v, i) => `<rect data-m="${i}" x="${x(i) - 13}" y="0" width="26" height="${H}" fill="transparent" style="cursor:pointer"/>`).join('')}
+    </svg>`;
+}
+
+$('#months').addEventListener('click', e => { const b = e.target.closest('[data-m]'); if (b){ month = +b.dataset.m; renderBudget(); } });
+$('#hero').addEventListener('click', e => {
+  const c = e.target.closest('[data-cur]'); if (c){ state.cur = c.dataset.cur; save(); renderBudget(); return; }
+  const b = e.target.closest('[data-m]'); if (b){ month = +b.dataset.m; renderBudget(); }
+});
+$('#chart').addEventListener('click', e => { const r = e.target.closest('[data-m]'); if (r){ month = +r.dataset.m; renderBudget(); } });
+
+document.addEventListener('input', e => {
+  const id = e.target.dataset?.id;
+  if (id){ setVal(id, month, fromInput(e.target.value, rowCur(id))); save(); renderSummary(); }
+});
+document.addEventListener('focusout', e => {
+  const id = e.target.dataset?.id;
+  if (id) e.target.value = toInput(val(id, month), rowCur(id));
+});
+document.addEventListener('click', e => {
+  const u = e.target.closest('[data-unit]'); if (!u) return;
+  const id = u.dataset.unit;
+  (state.lineCur ||= {})[id] = rowCur(id) === 'EUR' ? 'JPY' : 'EUR';
+  save(); renderInputs();
+  document.querySelector(`[data-id="${id}"]`)?.focus();
+});
+$('#start').addEventListener('input', e => {
+  state.start = fromInput(e.target.value, startCur());
+  if (startCur() === 'EUR') state.startEur = eurNum(e.target.value); else delete state.startEur;
+  save(); renderSummary();
+});
+$('#start').addEventListener('blur', e => { e.target.value = state.start ? startInput() : ''; });
+$('#startUnit').addEventListener('click', () => {
+  state.startCur = startCur() === 'EUR' ? 'JPY' : 'EUR';
+  if (state.startCur === 'EUR') state.startEur = state.start / state.rate; else delete state.startEur;
+  save(); renderInputs(); $('#start').focus();
+});
+$('#rate').addEventListener('input', e => {
+  const r = parseFloat(e.target.value.replace(',', '.'));
+  if (r > 0){
+    state.rate = r;
+    if (startCur() === 'EUR' && state.startEur != null) state.start = state.startEur * r;
+    save(); renderInputs(); renderSummary();
+  }
+});
+
+$('#copyNext').addEventListener('click', () => {
+  if (month === 11) return;
+  // on choisit les lignes à copier ; par défaut celles qui ont un montant ce mois-ci, les autres gardent leurs valeurs
+  const group = (type, title) => {
+    const cats = state.cats.filter(c => c.type === type); if (!cats.length) return '';
+    return `<div class="pick-head"><span class="small-label">${title}</span><span><button type="button" data-all="${type}">Tout</button><button type="button" data-none="${type}">Aucun</button></span></div>
+      <div class="picklist">${cats.map(c => { const v = val(c.id, month);
+        return `<label class="check ${v ? '' : 'zero'}"><input type="checkbox" data-pick="${c.id}" data-type="${type}" ${v ? 'checked' : ''}>
+          <span>${esc(c.name)}</span><b>${v ? fmtCur(v, rowCur(c.id)) : '—'}</b></label>`; }).join('')}</div>`;
+  };
+  openSheet(`<h3>Copier ${MONTHS[month].toLowerCase()}</h3>
+    <p class="small-label" style="margin:0 0 10px">Les lignes cochées remplaceront leurs montants (et leur détail) de ${MONTHS[month + 1].toLowerCase()} à décembre. Les autres ne bougent pas.</p>
+    ${group('in', 'Revenus')}${group('out', 'Dépenses')}
+    <div class="sheet-actions"><button class="btn grow" data-close>Annuler</button><button class="btn primary grow" id="okCopy"></button></div>`, el => {
+    const picks = () => [...el.querySelectorAll('[data-pick]:checked')].map(i => i.dataset.pick);
+    const label = () => { const n = picks().length, b = el.querySelector('#okCopy');
+      b.textContent = n ? `Copier ${n} ligne${n > 1 ? 's' : ''}` : 'Rien à copier'; b.disabled = !n; b.style.opacity = n ? 1 : .4; };
+    el.addEventListener('change', label);
+    el.querySelectorAll('[data-all],[data-none]').forEach(b => b.onclick = () => {
+      el.querySelectorAll(`[data-type="${b.dataset.all || b.dataset.none}"]`).forEach(i => i.checked = !!b.dataset.all); label();
+    });
+    label();
+    el.querySelector('#okCopy').onclick = () => {
+      const ids = picks(); if (!ids.length) return;
+      state.cats.filter(c => ids.includes(c.id)).forEach(c => { for (let m = month + 1; m < 12; m++){
+        if (items(c.id, month).length || items(c.id, m).length) setItems(c.id, m, items(c.id, month).map(it => ({...it, id:uid()})));
+        setVal(c.id, m, val(c.id, month));
+      } });
+      save(); closeSheet(); renderBudget();
+    };
+  });
+});
+
+document.addEventListener('click', e => { if (e.target.closest('[data-edit-lines]')){ editing = !editing; renderBudget(); } });
+document.addEventListener('input', e => {
+  const id = e.target.dataset?.rename; if (!id) return;
+  const name = e.target.value.trim();
+  if (name){ state.cats.find(c => c.id === id).name = name; save(); }
+});
+document.addEventListener('click', e => {
+  const d = e.target.closest('[data-del]'); if (!d) return;
+  const c = state.cats.find(c => c.id === d.dataset.del);
+  openSheet(`<h3>Supprimer « ${esc(c.name)} » ?</h3>
+    <p class="small-label" style="margin:0 0 14px">Les montants de cette ligne seront effacés sur tous les mois.</p>
+    <div class="sheet-actions"><button class="btn grow" data-close>Annuler</button><button class="btn danger grow" id="okDel">Supprimer</button></div>`, el => {
+    el.querySelector('#okDel').onclick = () => {
+      state.cats = state.cats.filter(x => x.id !== c.id); delete state.vals[c.id]; delete state.items?.[c.id];
+      save(); closeSheet(); renderBudget();
+    };
+  });
+});
+
+/* Dépenses globales */
+const whenLabel = m => m < 0 ? 'Avant le départ' : MONTHS[m];
+function renderGlobals(){
+  const list = [...state.globals].sort((a, b) => a.m - b.m);
+  $('#rows-gl').innerHTML = (list.length ? list.map(g =>
+    `<div class="item gl" data-gl="${g.id}"><span>${esc(g.label)}<small>${whenLabel(g.m)}</small></span><b>${fmtEntry(g)}</b></div>`).join('')
+    : '<div class="empty">Visa, billet d\'avion, assurance annuelle, caution…<br>Les charges payées en une fois.</div>')
+    + `<div class="subtotal"><span>Total</span><span>${money(globalsTotal())}</span></div>
+       <button class="btn" id="addGl">+ Dépense globale</button>`;
+}
+$('#rows-gl').addEventListener('click', e => {
+  if (e.target.closest('#addGl')) return globalSheet({id:uid(), label:'', amount:0, m:-1}, true);
+  const r = e.target.closest('[data-gl]'); if (r) globalSheet(state.globals.find(g => g.id === r.dataset.gl), false);
+});
+function globalSheet(g, isNew){
+  let cur = g.cur || curNow();
+  openSheet(`<h3>${isNew ? 'Nouvelle dépense globale' : 'Modifier la dépense'}</h3>
+    <label>Libellé<input id="gLabel" value="${esc(g.label)}" placeholder="Ex. Billet d'avion"></label>
+    <div class="fld"><div class="small-label">Montant ${curPick(cur)}</div><input id="gAmt" aria-label="Montant" inputmode="${modeOf(cur)}" placeholder="0"
+      value="${cur === 'EUR' && g.orig ? eurStr(g.orig) : toInput(g.amount, cur)}"></div>
+    <label>Payée<select id="gWhen">${[-1, ...MONTHS.keys()].map(m =>
+      `<option value="${m}" ${m === g.m ? 'selected' : ''}>${m < 0 ? 'Avant le départ' : 'En ' + MONTHS[m].toLowerCase()}</option>`).join('')}</select></label>
+    <div class="sheet-actions">
+      ${isNew ? '' : '<button class="btn danger" id="gDel">Supprimer</button>'}
+      <button class="btn grow" data-close>Annuler</button>
+      <button class="btn primary grow" id="gSave">Enregistrer</button>
+    </div>`, el => {
+    const lab = el.querySelector('#gLabel'), amt = el.querySelector('#gAmt');
+    bindCurPick(el, amt, c => cur = c);
+    if (isNew) setTimeout(() => lab.focus(), 50);
+    el.querySelector('#gSave').onclick = () => {
+      const label = lab.value.trim(), amount = fromInput(amt.value, cur);
+      if (!label) return lab.focus();
+      if (amount <= 0) return amt.focus();
+      Object.assign(g, {label, amount, cur, orig:cur === 'EUR' ? eurNum(amt.value) : amount, m:+el.querySelector('#gWhen').value});
+      if (isNew) state.globals.push(g);
+      save(); closeSheet(); renderBudget();
+    };
+    const del = el.querySelector('#gDel');
+    if (del) del.onclick = () => { state.globals = state.globals.filter(x => x.id !== g.id); save(); closeSheet(); renderBudget(); };
+  });
+}
+
+/* Détail d'une dépense : plusieurs achats additionnés */
+document.addEventListener('click', e => {
+  const b = e.target.closest('[data-items]'); if (b) openItems(b.dataset.items);
+});
+function openItems(id){
+  const c = state.cats.find(c => c.id === id);
+  // un montant saisi directement avant le détail reste visible comme première entrée
+  const shown = () => items(id, month).length ? items(id, month)
+    : val(id, month) ? [{id:'_', label:'Montant saisi', amount:val(id, month)}] : [];
+  const lc = rowCur(id);
+  let cur = lc;
+  const draw = el => {
+    const list = shown();
+    el.querySelector('#itList').innerHTML = list.length ? list.map(it =>
+      `<div class="item"><span>${esc(it.label) || 'Sans libellé'}${it.cur && it.cur !== lc ? `<small class="o">≈ ${fmtCur(it.amount, lc)}</small>` : ''}</span><b>${it.id === '_' ? fmtCur(it.amount, lc) : fmtEntry(it)}</b><button data-rm="${it.id}" aria-label="Retirer">×</button></div>`).join('')
+      : '<div class="empty">Aucune dépense ce mois-ci.</div>';
+    el.querySelector('#itTotal').textContent = fmtCur(val(id, month), lc);
+  };
+  openSheet(`<h3>${esc(c.name)} · ${MONTHS[month]}</h3>
+    <div class="items" id="itList"></div>
+    <div class="subtotal"><span>Total</span><span id="itTotal"></span></div>
+    <div class="additem">
+      <label>Libellé<input id="itLabel" placeholder="Ex. Konbini"></label>
+      <div class="fld a"><div class="small-label">Montant ${curPick(cur)}</div><input id="itAmt" aria-label="Montant" inputmode="${modeOf(cur)}" placeholder="0"></div>
+    </div>
+    <div class="sheet-actions"><button class="btn grow" data-close>Terminé</button><button class="btn primary grow" id="itAdd">Ajouter</button></div>`, el => {
+    const lab = el.querySelector('#itLabel'), amt = el.querySelector('#itAmt');
+    bindCurPick(el, amt, c => cur = c);
+    const add = () => {
+      const amount = fromInput(amt.value, cur); if (amount <= 0) return amt.focus();
+      const entry = {id:uid(), label:lab.value.trim(), amount, cur, orig:cur === 'EUR' ? eurNum(amt.value) : amount};
+      setItems(id, month, [...shown().map(it => it.id === '_' ? {...it, id:uid()} : it), entry]);
+      save(); renderBudget(); draw(el);
+      lab.value = ''; amt.value = ''; lab.focus();
+    };
+    el.querySelector('#itAdd').onclick = add;
+    lab.onkeydown = e => { if (e.key === 'Enter') amt.focus(); };
+    amt.onkeydown = e => { if (e.key === 'Enter') add(); };
+    el.querySelector('#itList').onclick = e => {
+      const r = e.target.closest('[data-rm]'); if (!r) return;
+      if (r.dataset.rm === '_') setVal(id, month, 0);
+      else setItems(id, month, items(id, month).filter(it => it.id !== r.dataset.rm));
+      save(); renderBudget(); draw(el);
+    };
+    draw(el);
+    setTimeout(() => lab.focus(), 50);
+  });
+}
+
+$('#addLine').addEventListener('click', () => {
+  let type = 'out';
+  openSheet(`<h3>Nouvelle ligne</h3>
+    <div class="seg"><button class="btn" data-t="in">Revenu</button><button class="btn on" data-t="out">Dépense</button></div>
+    <label>Nom<input id="lName" placeholder="Ex. Cours de japonais"></label>
+    <div class="sheet-actions"><button class="btn grow" data-close>Annuler</button><button class="btn primary grow" id="okLine">Ajouter</button></div>`, el => {
+    el.querySelectorAll('[data-t]').forEach(b => b.onclick = () => {
+      type = b.dataset.t; el.querySelectorAll('[data-t]').forEach(x => x.classList.toggle('on', x === b));
+    });
+    const n = el.querySelector('#lName'); setTimeout(() => n.focus(), 50);
+    const ok = () => { const name = n.value.trim(); if (!name) return n.focus();
+      state.cats.push({id:uid(), name, type}); save(); closeSheet(); renderBudget(); };
+    el.querySelector('#okLine').onclick = ok;
+    n.onkeydown = e => { if (e.key === 'Enter') ok(); };
+  });
+});
+
+/* ---------- Sheet ---------- */
+let onCloseSheet = null;
+function openSheet(html, mount, onClose){
+  $('#sheet').innerHTML = html; $('#backdrop').classList.add('open');
+  onCloseSheet = onClose || null; mount && mount($('#sheet'));
+}
+function closeSheet(){
+  $('#backdrop').classList.remove('open');
+  if (onCloseSheet){ const f = onCloseSheet; onCloseSheet = null; f(); }
+}
+$('#backdrop').addEventListener('click', e => { if (e.target.id === 'backdrop' || e.target.closest('[data-close]')) closeSheet(); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeSheet(); });
+
+/* ---------- Tabs ---------- */
+document.querySelectorAll('.tabbar button').forEach(b => b.addEventListener('click', () => {
+  document.querySelectorAll('.tabbar button').forEach(x => x.classList.toggle('on', x === b));
+  document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.id === 'tab-' + b.dataset.tab));
+  $('#subtitle').textContent = {budget:'Budget', map:"Centres d'intérêt", wish:'Wishlist'}[b.dataset.tab];
+  window.scrollTo(0, 0); $('#screen').scrollTop = 0;
+  if (b.dataset.tab === 'map') initMap();
+  if (b.dataset.tab === 'wish') renderWishes();   // devise ou taux ont pu changer côté budget
+}));
+
+/* ---------- Aperçu téléphone ---------- */
+const PHONE_KEY = 'pvt-japon-phone';
+const isPhone = () => document.body.classList.contains('phone');
+function fitPhone(){ $('#device').style.setProperty('--s', Math.min(1, (innerHeight - 32) / 868, (innerWidth - 32) / 414)); }
+function setPhone(on){
+  document.body.classList.toggle('phone', on);
+  $('#phoneBtn').classList.toggle('on', on);
+  $('#phoneBtn').setAttribute('aria-pressed', on);
+  try { localStorage.setItem(PHONE_KEY, on ? '1' : ''); } catch(e) {}
+  fitPhone(); renderMonths();
+  if (map) setTimeout(() => map.invalidateSize(), 50);
+}
+$('#phoneBtn').addEventListener('click', () => setPhone(!isPhone()));
+addEventListener('resize', fitPhone);
+
+/* ---------- Fond noir / blanc ---------- */
+const FOND_KEY = 'pvt-japon-fond';
+const darkQuery = matchMedia('(prefers-color-scheme: dark)');
+// sans choix enregistré, on suit le thème du système
+function isDark(){ const f = document.documentElement.dataset.fond; return f ? f === 'noir' : darkQuery.matches; }
+function renderFondBtn(){
+  const dark = isDark();
+  $('#fondBtn').innerHTML = dark
+    ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>'
+    : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></svg>';
+  $('#fondBtn').title = dark ? 'Passer au fond blanc' : 'Passer au fond noir';
+}
+function setFond(f){
+  document.documentElement.dataset.fond = f;
+  try { localStorage.setItem(FOND_KEY, f); } catch(e) {}
+  renderFondBtn();
+  if (map) styleMap();
+}
+$('#fondBtn').addEventListener('click', () => setFond(isDark() ? 'blanc' : 'noir'));
+darkQuery.addEventListener('change', () => { renderFondBtn(); if (map) styleMap(); });
+try { const f = localStorage.getItem(FOND_KEY); if (f === 'noir' || f === 'blanc') document.documentElement.dataset.fond = f; } catch(e) {}
+renderFondBtn();
+
+/* ---------- Map ---------- */
+let map, layer, tempMarker, filter = 'all';
+function initMap(){
+  if (map){ setTimeout(() => map.invalidateSize(), 0); return; }
+  if (!window.L){ $('#map').innerHTML = '<div class="empty">La carte a besoin d\'une connexion internet.</div>'; return; }
+  map = L.map('map', {zoomControl:false}).setView([36.4, 138.2], 5);
+  L.control.zoom({position:'bottomright'}).addTo(map);
+  styleMap();
+  layer = L.layerGroup().addTo(map);
+  map.on('click', e => homeDraft ? placeHome(e.latlng) : newPoi(e.latlng.lat, e.latlng.lng, ''));
+  renderPois();
+  if (state.pois.length) map.fitBounds(state.pois.map(p => [p.lat, p.lng]), {padding:[40, 40], maxZoom:12});
+}
+
+// fond de carte assorti au fond noir / blanc ; rappelé quand on change de fond
+let baseLayers = [];
+function styleMap(){
+  baseLayers.forEach(t => t.remove());
+  const tone = isDark() ? 'Dark' : 'Light';
+  const esri = name => `https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_${tone}_Gray_${name}/MapServer/tile/{z}/{y}/{x}`;
+  baseLayers = [
+    L.tileLayer(esri('Base'), {maxZoom:16, attribution:'Tiles &copy; Esri'}).addTo(map),
+    L.tileLayer(esri('Reference'), {maxZoom:16}).addTo(map)
+  ];
+}
+
+const homeIcon = window.L && L.divIcon({className:'', iconSize:[38, 38], iconAnchor:[19, 19], html:'<div class="pin home"><span>家</span></div>'});
+const pinIcon = p =>L.divIcon({className:'', iconSize:[32, 32], iconAnchor:[16, 16],
+  html:`<div class="pin ${p.visited ? 'done' : ''}" style="--c:${CATS[p.cat].color}"><span>${CATS[p.cat].glyph}</span></div>`});
+
+function renderPois(){
+  if (layer){
+    layer.clearLayers();
+    state.pois.forEach(p => L.marker([p.lat, p.lng], {icon:pinIcon(p), title:p.name}).on('click', () => editPoi(p.id)).addTo(layer));
+    state.homes.filter(h => h.lat != null).forEach(h => L.marker([h.lat, h.lng], {icon:homeIcon, title:homeName(h), zIndexOffset:1000})
+      .on('click', () => homeSheet({...h})).addTo(layer));
+  }
+  renderHome();
+  // un lieu visité quitte « Tous » et ne reste que dans « Visités »
+  const visible = state.pois.filter(p => (filter === 'done') === !!p.visited);
+  // listes des filtres : seulement les villes et types présents, par ordre alphabétique
+  const fillSelect = (sel, first, opts) => {
+    const cur = sel.value;
+    sel.innerHTML = `<option value="">${first}</option>` + opts.map(([v, l]) => `<option value="${esc(v)}">${esc(l)}</option>`).join('');
+    sel.value = opts.some(o => o[0] === cur) ? cur : '';
+    sel.classList.toggle('on', !!sel.value);
+  };
+  const count = (list, f) => list.reduce((m, p) => (m[f(p)] = (m[f(p)] || 0) + 1, m), {});
+  const nCat = count(visible, p => p.cat);
+  fillSelect($('#fCat'), 'Tous les types', catOrder().filter(k => nCat[k]).map(k => [k, CATS[k].label]));
+  // villes choisies (une ou plusieurs) ; celles qui n'ont plus de lieu sont oubliées
+  const present = new Set(visible.map(cityOf));
+  [...cityPick].forEach(c => { if (!present.has(c)) cityPick.delete(c); });
+  const picked = [...cityPick].sort(byName);
+  $('#fCity').textContent = !picked.length ? 'Toutes les villes' : picked.length === 1 ? picked[0] : `${picked[0]} + ${picked.length - 1}`;
+  $('#fCity').classList.toggle('on', !!picked.length);
+  const cat = $('#fCat').value, q = fold($('#poiSearch').value.trim());
+  const list = visible.filter(p => (!cityPick.size || cityPick.has(cityOf(p))) && (!cat || p.cat === cat)
+    && (!q || fold([p.name, p.address, p.note, cityOf(p), CATS[p.cat].label].join(' ')).includes(q)));
+  const done = state.pois.filter(p => p.visited).length;
+  $('#count').textContent = done || '';
+  const poiHTML = p => `
+    <div class="poi ${p.visited ? 'done' : ''}" data-go="${p.id}" style="--c:${CATS[p.cat].color}">
+      <div class="g">${CATS[p.cat].glyph}</div>
+      <div class="t"><b>${esc(p.name)}</b><span>${CATS[p.cat].label}${p.visited ? ' · visité' : ''}</span>${p.address ? `<span class="addr">${esc(p.address)}</span>` : ''}${p.note ? `<p>${esc(p.note)}</p>` : ''}
+        <div class="links">${plansLink(p.name, p.lat, p.lng, p.address, 'plans')}${p.address ? `<button type="button" class="pcopy" data-pcopy="${p.id}">Copier l'adresse</button>` : ''}</div></div>
+      <button class="edit" data-edit="${p.id}">Modifier</button>
+    </div>`;
+  // villes par ordre alphabétique ; dans chaque ville, les lieux regroupés par type puis par nom
+  const groups = {};
+  list.forEach(p => (groups[cityOf(p)] ||= []).push(p));
+  const types = catOrder();
+  $('#poiList').innerHTML = list.length ? Object.keys(groups).sort(byName).map(c => {
+    const g = groups[c], v = g.filter(p => p.visited).length;
+    const byType = types.filter(k => g.some(p => p.cat === k)).map(k => {
+      const items = g.filter(p => p.cat === k).sort((a, b) => byName(a.name, b.name));
+      return `<div class="type-head" style="--c:${CATS[k].color}">${CATS[k].glyph} ${CATS[k].label}</div>${items.map(poiHTML).join('')}`;
+    }).join('');
+    return `<div class="city-group">
+      <button class="city-head" data-city="${esc(c)}" title="Voir ${esc(c)} sur la carte"><b>${esc(c)}</b>
+        <span>${g.length} lieu${g.length > 1 ? 'x' : ''}${v ? ` · <em>${v} visité${v > 1 ? 's' : ''}</em>` : ''}</span></button>
+      ${byType}
+    </div>`;
+  }).join('')
+    : `<div class="empty">${!state.pois.length ? 'Aucun point pour l\'instant.<br>Cherche un lieu ou touche la carte.'
+        : visible.length ? 'Aucun lieu ne correspond à la recherche ou aux filtres.'
+        : filter === 'done' ? 'Aucun lieu visité pour l\'instant.' : 'Tout est visité !'}</div>`;
+}
+// types par ordre alphabétique, « Autre » en dernier
+const catOrder = () => Object.keys(CATS).sort((a, b) => (a === 'autre') - (b === 'autre') || byName(CATS[a].label, CATS[b].label));
+$('#poiSearch').addEventListener('input', renderPois);
+const cityPick = new Set();   // villes cochées dans le filtre (vide = toutes)
+$('#fCity').addEventListener('click', () => {
+  const visible = state.pois.filter(p => (filter === 'done') === !!p.visited);
+  const n = visible.reduce((m, p) => (m[cityOf(p)] = (m[cityOf(p)] || 0) + 1, m), {});
+  openSheet(`<h3>Villes</h3>
+    <div class="pick-head"><span class="small-label">Une ou plusieurs</span><span><button type="button" id="cAll">Tout cocher</button><button type="button" id="cNone">Aucune</button></span></div>
+    <div class="citylist">${Object.keys(n).sort(byName).map(c =>
+      `<label class="check"><input type="checkbox" data-c="${esc(c)}" ${cityPick.has(c) ? 'checked' : ''}><span>${esc(c)}</span><small>${n[c]} lieu${n[c] > 1 ? 'x' : ''}</small></label>`).join('')}</div>
+    <div class="sheet-actions"><button class="btn primary grow" data-close>Voir les lieux</button></div>`, el => {
+    const sync = () => { cityPick.clear(); el.querySelectorAll('[data-c]:checked').forEach(i => cityPick.add(i.dataset.c)); renderPois(); };
+    el.addEventListener('change', sync);
+    el.querySelector('#cAll').onclick = () => { el.querySelectorAll('[data-c]').forEach(i => i.checked = true); sync(); };
+    el.querySelector('#cNone').onclick = () => { el.querySelectorAll('[data-c]').forEach(i => i.checked = false); sync(); };
+  });
+});
+$('#fCat').addEventListener('change', renderPois);
+
+$('#filters').addEventListener('click', e => {
+  const b = e.target.closest('[data-f]'); if (!b) return;
+  filter = b.dataset.f; document.querySelectorAll('#filters .chip').forEach(x => x.classList.toggle('on', x === b)); renderPois();
+});
+$('#poiList').addEventListener('click', async e => {
+  if (e.target.closest('a')) return;   // le lien Plans s'ouvre tout seul, sans recentrer la carte
+  const ed = e.target.closest('[data-edit]'); if (ed) return editPoi(ed.dataset.edit);
+  const cp = e.target.closest('[data-pcopy]');
+  if (cp){
+    const ok = await copyText(state.pois.find(p => p.id === cp.dataset.pcopy).address);
+    cp.textContent = ok ? 'Adresse copiée ✓' : 'Copie impossible'; cp.classList.add('ok');
+    return setTimeout(() => { cp.textContent = "Copier l'adresse"; cp.classList.remove('ok'); }, 1800);
+  }
+  const head = e.target.closest('[data-city]');
+  if (head && map){
+    const pts = state.pois.filter(p => cityOf(p) === head.dataset.city).map(p => [p.lat, p.lng]);
+    $('#map').scrollIntoView({behavior:'smooth', block:'center'});
+    return map.flyToBounds(pts, {padding:[50, 50], maxZoom:13, duration:.8});
+  }
+  const go = e.target.closest('[data-go]'); if (!go || !map) return;
+  const p = state.pois.find(p => p.id === go.dataset.go);
+  $('#map').scrollIntoView({behavior:'smooth', block:'center'});
+  map.flyTo([p.lat, p.lng], 14, {duration:.8});
+});
+
+function poiSheet(p, isNew){
+  let cat = p.cat;
+  openSheet(`<h3>${isNew ? 'Nouveau point' : 'Modifier le point'}</h3>
+    <label>Nom<input id="pName" value="${esc(p.name)}" placeholder="Ex. Kiyomizu-dera"></label>
+    <div class="small-label">Catégorie</div>
+    <div class="catpick">${Object.entries(CATS).map(([k, c]) =>
+      `<button type="button" data-cat="${k}" class="${k === cat ? 'on' : ''}" style="--c:${c.color}"><b>${c.glyph}</b>${c.label}</button>`).join('')}</div>
+    <label>Ville<input id="pCity" list="cityList" value="${esc(cityOf(p))}" placeholder="Ville la plus proche"></label>
+    <datalist id="cityList">${CITIES.map(c => `<option value="${c[0]}">`).join('')}</datalist>
+    <label>Adresse<textarea id="pAddr" rows="2" placeholder="Remplie par la recherche, ou à taper">${esc(p.address)}</textarea></label>
+    <label>Note<textarea id="pNote" rows="3" placeholder="Horaires, prix, avec qui…">${esc(p.note)}</textarea></label>
+    <label class="check"><input type="checkbox" id="pVis" ${p.visited ? 'checked' : ''}> Déjà visité</label>
+    <div class="sheet-actions">
+      ${isNew ? '' : '<button class="btn danger" id="pDel">Supprimer</button>'}
+      <button class="btn grow" data-close>Annuler</button>
+      <button class="btn primary grow" id="pSave">Enregistrer</button>
+    </div>`, el => {
+    el.querySelectorAll('[data-cat]').forEach(b => b.onclick = () => {
+      cat = b.dataset.cat; el.querySelectorAll('[data-cat]').forEach(x => x.classList.toggle('on', x === b));
+    });
+    const n = el.querySelector('#pName'); if (isNew && !p.name) setTimeout(() => n.focus(), 50);
+    el.querySelector('#pSave').onclick = () => {
+      const name = n.value.trim(); if (!name) return n.focus();
+      Object.assign(p, {name, cat, city:el.querySelector('#pCity').value.trim() || nearestCity(p.lat, p.lng),
+        address:el.querySelector('#pAddr').value.trim(),
+        note:el.querySelector('#pNote').value.trim(), visited:el.querySelector('#pVis').checked});
+      if (isNew) state.pois.unshift(p);
+      save(); closeSheet(); renderPois();
+    };
+    const del = el.querySelector('#pDel');
+    if (del) del.onclick = () => { state.pois = state.pois.filter(x => x.id !== p.id); save(); closeSheet(); renderPois(); };
+  }, () => { if (tempMarker){ tempMarker.remove(); tempMarker = null; } });
+}
+// lien vers Plans d'Apple (ouvre l'app sur iPhone et Mac, le site ailleurs), avec les rues et l'itinéraire
+const plansUrl = (name, lat, lng, address) => lat != null
+  ? `https://maps.apple.com/?ll=${lat},${lng}&q=${encodeURIComponent(name || address || 'Lieu')}`
+  : `https://maps.apple.com/?q=${encodeURIComponent(address)}`;
+const plansLink = (name, lat, lng, address, cls = '') =>
+  `<a class="${cls}" href="${esc(plansUrl(name, lat, lng, address))}" target="_blank" rel="noopener">Ouvrir dans Plans</a>`;
+
+/* ---------- Logement ---------- */
+// state.homes = [{id, name, address, lat, lng}] ; l'adresse est gardée telle que saisie, la position sert à la carte
+let homeDraft = null;   // logement en cours de saisie pendant qu'on le place sur la carte
+const homeName = h => h.name || (state.homes.length > 1 ? `Logement ${state.homes.indexOf(h) + 1}` : 'Mon logement');
+function renderHome(){
+  const list = state.homes;
+  $('#homeCard').innerHTML = list.length ? list.map(h => `<div class="home-row">
+      <div class="g">家</div>
+      <div class="t"><b>${esc(homeName(h))}</b><span>${esc(h.address)}</span>${h.lat == null ? '<span class="warn">Pas encore placé sur la carte</span>' : ''}
+        <div class="links"><button type="button" data-hcopy="${h.id}">Copier l'adresse</button>${h.lat != null ? `<button type="button" data-hgo="${h.id}">Voir sur la carte</button>` : ''}${plansLink(homeName(h), h.lat, h.lng, h.address)}</div></div>
+      <button class="btn" data-hedit="${h.id}">Modifier</button>
+    </div>`).join('') + '<button class="btn home-add" id="homeAdd">+ Ajouter un logement</button>'
+    : `<button class="home-set" id="homeAdd"><span class="g">家</span>
+        <span><b>Définir mon logement</b><small>Adresse exacte, placée sur la carte</small></span></button>`;
+}
+// copie dans le presse-papiers, avec repli par sélection quand l'API est refusée
+async function copyText(text){
+  try { await navigator.clipboard.writeText(text); return true; }
+  catch(e){
+    const t = document.createElement('textarea'); t.value = text; t.style.cssText = 'position:fixed;opacity:0';
+    document.body.append(t); t.select(); const ok = document.execCommand('copy'); t.remove(); return ok;
+  }
+}
+$('#homeCard').addEventListener('click', async e => {
+  const byId = el => state.homes.find(h => h.id === el.dataset[Object.keys(el.dataset)[0]]);
+  if (e.target.closest('#homeAdd')) return homeSheet({id:uid(), name:'', address:''});
+  const ed = e.target.closest('[data-hedit]'); if (ed) return homeSheet({...byId(ed)});
+  const cp = e.target.closest('[data-hcopy]');
+  if (cp){
+    const ok = await copyText(byId(cp).address);
+    cp.textContent = ok ? 'Adresse copiée ✓' : 'Copie impossible'; cp.classList.add('ok');
+    return setTimeout(() => { cp.textContent = "Copier l'adresse"; cp.classList.remove('ok'); }, 1800);
+  }
+  const go = e.target.closest('[data-hgo]');
+  if (go && map){
+    const h = byId(go);
+    $('#map').scrollIntoView({behavior:'smooth', block:'center'});
+    map.flyTo([h.lat, h.lng], 15, {duration:.8});
+  }
+});
+// géocodage de l'adresse : renvoie {lat, lng, label} ou null
+async function geocodeAddress(q){
+  const r = await fetch(`https://nominatim.openstreetmap.org/search?format=json&countrycodes=jp&limit=1&accept-language=fr&q=${encodeURIComponent(q)}`);
+  const d = (await r.json())[0];
+  return d ? {lat:+d.lat, lng:+d.lon, label:d.display_name} : null;
+}
+function homeSheet(h, msg){
+  const exists = state.homes.some(x => x.id === h.id);
+  const pos = msg || (h.lat != null ? ['ok', 'Placé sur la carte ✓'] : ['', 'Pas encore placé sur la carte']);
+  openSheet(`<h3>${exists ? 'Modifier le logement' : 'Nouveau logement'}</h3>
+    <label>Nom (facultatif)<input id="hName" value="${esc(h.name)}" placeholder="Ex. Share house Tokyo, Appart Osaka…"></label>
+    <label>Adresse exacte<textarea id="hAddr" rows="3" placeholder="Ex. Maison Kitazawa 203, 3-12-5 Kitazawa, Setagaya-ku, Tokyo 155-0031">${esc(h.address)}</textarea></label>
+    <div class="sheet-actions" style="margin:0 0 10px">
+      <button class="btn grow" type="button" id="hFind">Localiser l'adresse</button>
+      <button class="btn grow" type="button" id="hPlace">Placer à la main</button>
+    </div>
+    <p class="home-pos ${pos[0]}" id="hPos">${esc(pos[1])}</p>
+    <div class="sheet-actions">
+      ${exists ? '<button class="btn danger" id="hDel">Supprimer</button>' : ''}
+      <button class="btn grow" data-close>Annuler</button>
+      <button class="btn primary grow" id="hSave">Enregistrer</button>
+    </div>`, el => {
+    const addr = el.querySelector('#hAddr'), name = el.querySelector('#hName');
+    const status = (cls, t) => { const p = el.querySelector('#hPos'); p.className = 'home-pos ' + cls; p.textContent = t; };
+    if (!h.address) setTimeout(() => addr.focus(), 50);
+    el.querySelector('#hFind').onclick = async () => {
+      const q = addr.value.trim(); if (!q) return addr.focus();
+      status('', 'Recherche…');
+      try {
+        const r = await geocodeAddress(q);
+        if (!r) return status('err', 'Adresse introuvable : utilise « Placer à la main ».');
+        Object.assign(h, {lat:r.lat, lng:r.lng});
+        status('ok', 'Trouvé : ' + r.label + ' — vérifie sur la carte, sinon place-le à la main.');
+        if (map){ map.flyTo([r.lat, r.lng], 16, {duration:.8}); }
+      } catch(e){ status('err', 'Recherche indisponible : utilise « Placer à la main ».'); }
+    };
+    el.querySelector('#hPlace').onclick = () => {
+      Object.assign(h, {address:addr.value, name:name.value}); homeDraft = h; closeSheet();
+      document.querySelector('[data-tab="map"]').click();
+      $('#placing').hidden = false; $('#map').scrollIntoView({behavior:'smooth', block:'center'});
+      if (map && h.lat != null) map.flyTo([h.lat, h.lng], 16, {duration:.8});
+    };
+    el.querySelector('#hSave').onclick = () => {
+      const address = addr.value.trim(); if (!address) return addr.focus();
+      const rec = {id:h.id, name:name.value.trim(), address, ...(h.lat != null ? {lat:h.lat, lng:h.lng} : {})};
+      const i = state.homes.findIndex(x => x.id === h.id);
+      if (i >= 0) state.homes[i] = rec; else state.homes.push(rec);
+      save(); closeSheet(); renderPois();
+    };
+    const del = el.querySelector('#hDel');
+    if (del) del.onclick = () => { state.homes = state.homes.filter(x => x.id !== h.id); save(); closeSheet(); renderPois(); };
+  });
+}
+function placeHome(ll){
+  const h = homeDraft; homeDraft = null; $('#placing').hidden = true;
+  Object.assign(h, {lat:ll.lat, lng:ll.lng});
+  homeSheet(h, ['ok', 'Placé sur la carte ✓ — enregistre pour garder.']);
+}
+$('#placingCancel').addEventListener('click', () => { const h = homeDraft; homeDraft = null; $('#placing').hidden = true; homeSheet(h); });
+
+function newPoi(lat, lng, name, address = ''){
+  if (tempMarker) tempMarker.remove();
+  tempMarker = L.circleMarker([lat, lng], {radius:10, color:'#101418', weight:3, fillColor:'#FFC400', fillOpacity:.95}).addTo(map);
+  poiSheet({id:uid(), lat, lng, name, address, cat:'autre', note:'', visited:false}, true);
+}
+function editPoi(id){ const p = state.pois.find(p => p.id === id); if (p) poiSheet(p, false); }
+
+$('#searchForm').addEventListener('submit', async e => {
+  e.preventDefault();
+  const q = $('#q').value.trim(); if (!q) return;
+  const box = $('#results'); box.innerHTML = '<div class="empty">Recherche…</div>';
+  try {
+    const r = await fetch(`https://nominatim.openstreetmap.org/search?format=json&countrycodes=jp&limit=5&accept-language=fr&q=${encodeURIComponent(q)}`);
+    const data = await r.json();
+    box.innerHTML = data.length ? data.map((d, i) =>
+      `<button class="result" data-i="${i}">${esc(d.name || d.display_name.split(',')[0])}<small>${esc(d.display_name)}</small></button>`).join('')
+      : '<div class="empty">Aucun résultat.</div>';
+    box.onclick = ev => {
+      const b = ev.target.closest('[data-i]'); if (!b) return;
+      const d = data[+b.dataset.i], lat = +d.lat, lng = +d.lon;
+      box.innerHTML = ''; $('#q').value = '';
+      map.flyTo([lat, lng], 14, {duration:.8});
+      newPoi(lat, lng, d.name || d.display_name.split(',')[0], d.display_name);   // l'adresse complète va dans la fiche
+    };
+  } catch(err){ box.innerHTML = '<div class="empty">Recherche indisponible (connexion ?).</div>'; }
+});
+
+/* ---------- Wishlist ---------- */
+const WISH = {
+  faire:  {label:'À faire',   color:'#0067C0', glyph:'行'},
+  acheter:{label:'À acheter', color:'#C55A00', glyph:'買'}
+};
+let wishFilter = 'all';
+function renderWishes(){
+  const all = state.wishes;
+  // ce qui est coché part dans « Fait » et n'apparaît plus dans les autres filtres
+  const q = fold($('#wishSearch').value.trim());
+  const list = all.filter(w => wishFilter === 'done' ? w.done : !w.done && (wishFilter === 'all' || w.kind === wishFilter))
+    .filter(w => !q || fold(w.label + ' ' + w.note).includes(q));
+  // « À faire » et « À acheter » par ordre alphabétique
+  if (wishFilter === 'faire' || wishFilter === 'acheter') list.sort((a, b) => byName(a.label, b.label));
+  const done = all.filter(w => w.done).length;
+  $('#wishCount').textContent = done || '';   // nombre d'envies cochées, sur l'onglet « Fait »
+  $('#wishList').innerHTML = list.length ? list.map(w => `
+    <div class="poi wish ${w.done ? 'done' : ''}" style="--c:${WISH[w.kind].color}">
+      <button class="g" data-tick="${w.id}" aria-label="${w.done ? 'Marquer à faire' : 'Marquer comme fait'}">${WISH[w.kind].glyph}</button>
+      <div class="t"><b>${esc(w.label)}</b><span>${WISH[w.kind].label}${w.done ? (w.kind === 'acheter' ? ' · acheté' : ' · fait') : ''}</span>${w.note ? `<p>${esc(w.note)}</p>` : ''}</div>
+      ${w.amount ? `<span class="price">${fmtEntry(w)}</span>` : ''}
+      <button class="edit" data-wedit="${w.id}">Modifier</button>
+    </div>`).join('')
+    : `<div class="empty">${!all.length ? 'Aucune envie pour l\'instant.<br>Ajoute ce que tu veux faire ou acheter.'
+        : q ? 'Aucune envie ne correspond à la recherche.'
+        : wishFilter === 'done' ? 'Rien de coché pour l\'instant.' : 'Rien dans ce filtre.'}</div>`;
+  // ce qu'il reste à payer pour les envies pas encore faites, dans la devise d'affichage
+  const left = list.filter(w => !w.done).reduce((s, w) => s + (w.amount || 0), 0);
+  $('#wishTotal').hidden = !left;
+  $('#wishTotal span:last-child').textContent = `${yen(left)} · ${eur(left)}`;
+}
+$('#wishSearch').addEventListener('input', renderWishes);
+$('#wishFilters').addEventListener('click', e => {
+  const b = e.target.closest('[data-w]'); if (!b) return;
+  wishFilter = b.dataset.w; document.querySelectorAll('#wishFilters .chip').forEach(x => x.classList.toggle('on', x === b)); renderWishes();
+});
+$('#wishList').addEventListener('click', e => {
+  const t = e.target.closest('[data-tick]');
+  if (t){ const w = state.wishes.find(w => w.id === t.dataset.tick); w.done = !w.done; save(); return renderWishes(); }
+  const ed = e.target.closest('[data-wedit]');
+  if (ed) wishSheet(state.wishes.find(w => w.id === ed.dataset.wedit), false);
+});
+$('#wishAdd').addEventListener('click', () =>
+  wishSheet({id:uid(), label:'', kind:wishFilter === 'acheter' ? 'acheter' : 'faire', amount:0, note:'', done:false}, true));
+function wishSheet(w, isNew){
+  let kind = w.kind, cur = w.cur || curNow();
+  openSheet(`<h3>${isNew ? 'Nouvelle envie' : 'Modifier l\'envie'}</h3>
+    <div class="seg">${Object.entries(WISH).map(([k, c]) =>
+      `<button type="button" class="btn ${k === kind ? 'on' : ''}" data-k="${k}">${c.label}</button>`).join('')}</div>
+    <label>Quoi<input id="wLabel" value="${esc(w.label)}" placeholder="Ex. Monter au Fuji, un yukata…"></label>
+    <div class="fld"><div class="small-label">Prix (facultatif) ${curPick(cur)}</div><input id="wAmt" aria-label="Prix" inputmode="${modeOf(cur)}" placeholder="0"
+      value="${cur === 'EUR' && w.orig ? eurStr(w.orig) : toInput(w.amount, cur)}"></div>
+    <label>Note<textarea id="wNote" rows="3" placeholder="Où, quand, lien…">${esc(w.note)}</textarea></label>
+    <label class="check"><input type="checkbox" id="wDone" ${w.done ? 'checked' : ''}> Déjà fait</label>
+    <div class="sheet-actions">
+      ${isNew ? '' : '<button class="btn danger" id="wDel">Supprimer</button>'}
+      <button class="btn grow" data-close>Annuler</button>
+      <button class="btn primary grow" id="wSave">Enregistrer</button>
+    </div>`, el => {
+    const lab = el.querySelector('#wLabel'), amt = el.querySelector('#wAmt');
+    el.querySelectorAll('[data-k]').forEach(b => b.onclick = () => {
+      kind = b.dataset.k; el.querySelectorAll('[data-k]').forEach(x => x.classList.toggle('on', x === b));
+    });
+    bindCurPick(el, amt, c => cur = c);
+    if (isNew) setTimeout(() => lab.focus(), 50);
+    el.querySelector('#wSave').onclick = () => {
+      const label = lab.value.trim(); if (!label) return lab.focus();
+      const amount = fromInput(amt.value, cur);
+      Object.assign(w, {label, kind, amount, cur, orig:cur === 'EUR' ? eurNum(amt.value) : amount,
+        note:el.querySelector('#wNote').value.trim(), done:el.querySelector('#wDone').checked});
+      if (isNew) state.wishes.unshift(w);
+      save(); closeSheet(); renderWishes();
+    };
+    const del = el.querySelector('#wDel');
+    if (del) del.onclick = () => { state.wishes = state.wishes.filter(x => x.id !== w.id); save(); closeSheet(); renderWishes(); };
+  });
+}
+
+/* ---------- Sauvegarde ---------- */
+// les familles de données qu'on peut exporter séparément
+const PARTS = {
+  budget:{label:'Budget', keys:['rate','rateAuto','rateDate','start','startCur','startEur','cats','vals','items','globals','lineCur','cur'],
+          sub:() => `${state.cats.length} lignes, dépenses globales, épargne et taux`},
+  pois:  {label:"Centres d'intérêt", keys:['pois'], sub:() => `${state.pois.length} lieu${state.pois.length > 1 ? 'x' : ''}`},
+  homes: {label:'Logements', keys:['homes'], sub:() => `${state.homes.length} logement${state.homes.length > 1 ? 's' : ''}`},
+  wishes:{label:'Wishlist', keys:['wishes'], sub:() => `${state.wishes.length} envie${state.wishes.length > 1 ? 's' : ''}`}
+};
+const LISTS = {pois:'lieu', homes:'logement', wishes:'envie'};
+function exportParts(parts){
+  const o = {app:'pvt-japon', parts};
+  parts.forEach(p => PARTS[p].keys.forEach(k => { if (state[k] !== undefined) o[k] = state[k]; }));
+  return JSON.stringify(o, null, 2);
+}
+// le texte est copié : on le colle dans un message, et l'autre fait « Coller des données »
+async function deliverExport(json, name, el){
+  const m = el.querySelector('#mMsg'); m.hidden = false;
+  try { await navigator.clipboard.writeText(json); m.className = 'note-ok'; m.textContent = 'Données copiées : envoie-les par message, l\'autre fait Sauvegarde › Coller des données.'; }
+  catch(e){
+    m.className = 'note-err'; m.textContent = 'Copie automatique refusée : sélectionne le texte ci-dessous et copie-le.';
+    let t = el.querySelector('#mCopy');
+    if (!t){ t = document.createElement('textarea'); t.className = 'copybox'; t.id = 'mCopy'; t.readOnly = true; m.after(t); }
+    t.value = json; t.select();
+  }
+}
+// import : seules les familles présentes dans le fichier changent ; lieux, logements et envies sont ajoutés
+// (un élément déjà présent, même identifiant, est mis à jour) ; le budget du fichier remplace le budget
+function importData(d){
+  if (!d || typeof d !== 'object' || !(d.cats || ['pois', 'homes', 'wishes'].some(k => Array.isArray(d[k])) || d.home)) throw 0;
+  if (d.home && !d.homes) d.homes = [{id:uid(), ...d.home}];
+  const done = [];
+  if (Array.isArray(d.cats)){
+    const def = defaults();
+    PARTS.budget.keys.forEach(k => { const v = d[k] !== undefined ? d[k] : def[k]; if (v === undefined) delete state[k]; else state[k] = v; });
+    state.vals ||= {}; state.globals ||= [];
+    done.push('le budget');
+  }
+  Object.entries(LISTS).forEach(([k, word]) => {
+    if (!Array.isArray(d[k])) return;
+    const all = new Map(state[k].map(x => [x.id, x]));
+    let added = 0;
+    d[k].forEach(x => { if (!x.id) x.id = uid(); if (!all.has(x.id)) added++; all.set(x.id, x); });
+    state[k] = [...all.values()];
+    done.push(`${d[k].length} ${word}${d[k].length > 1 ? (word === 'lieu' ? 'x' : 's') : ''} (${added} nouveau${added > 1 ? 'x' : ''})`);
+  });
+  save(); renderBudget(); renderPois(); renderWishes();
+  return done;
+}
+function exportSheet(){
+  openSheet(`<h3>Exporter</h3>
+    <p class="small-label" style="margin:0 0 10px">Choisis ce que tu envoies : à l'import, seules ces données seront ajoutées ou remplacées chez l'autre.</p>
+    <div class="parts">${Object.entries(PARTS).map(([k, p]) =>
+      `<label class="check"><input type="checkbox" data-part="${k}" checked><span>${p.label}<small>${esc(p.sub())}</small></span></label>`).join('')}</div>
+    <p id="mMsg" hidden></p>
+    <div class="sheet-actions"><button class="btn grow" data-close>Annuler</button><button class="btn primary grow" id="xGo"></button></div>`, el => {
+    const parts = () => [...el.querySelectorAll('[data-part]:checked')].map(i => i.dataset.part);
+    const label = () => { const n = parts().length, b = el.querySelector('#xGo');
+      b.textContent = n ? 'Exporter' : 'Rien de coché'; b.disabled = !n; b.style.opacity = n ? 1 : .4; };
+    el.addEventListener('change', label); label();
+    el.querySelector('#xGo').onclick = () => {
+      const p = parts(); if (!p.length) return;
+      deliverExport(exportParts(p), `pvt-japon-${p.length === 4 ? 'tout' : p.join('-')}.json`, el);
+    };
+  });
+}
+function menuSheet(note){
+  openSheet(`<h3>Sauvegarde</h3>
+    ${note ? `<p class="${note[0]}">${esc(note[1])}</p>` : ''}
+    <button class="btn menu-item" id="mExp">Exporter des données<small>Budget, lieux, logements, wishlist : tu choisis</small></button>
+    <button class="btn menu-item" id="mPaste">Coller des données<small>Le texte copié depuis « Exporter », sur cet appareil ou un autre</small></button>
+    <label class="btn menu-item" style="color:var(--ink);font-size:14px">Importer un fichier<small>Ajoute ce que contient le fichier, sans effacer le reste</small><input type="file" id="mImp" accept="application/json" hidden></label>
+    <button class="btn menu-item danger" id="mReset">Tout réinitialiser<small>Efface budget, points et wishlist</small></button>`, el => {
+    el.querySelector('#mExp').onclick = exportSheet;
+    el.querySelector('#mPaste').onclick = () => openSheet(`<h3>Coller des données</h3>
+      <label>Texte exporté<textarea id="pTxt" rows="6" placeholder='{"app":"pvt-japon", …}'></textarea></label>
+      <div class="sheet-actions"><button class="btn grow" data-close>Annuler</button><button class="btn primary grow" id="pGo">Importer</button></div>`, s2 => {
+      const t = s2.querySelector('#pTxt'); setTimeout(() => t.focus(), 50);
+      s2.querySelector('#pGo').onclick = () => {
+        try { menuSheet(['note-ok', 'Importé : ' + importData(JSON.parse(t.value)).join(', ') + '.']); }
+        catch(e){ menuSheet(['note-err', 'Texte invalide : colle le texte copié depuis « Exporter ».']); }
+      };
+    });
+    el.querySelector('#mImp').onchange = async ev => {
+      try { const done = importData(JSON.parse(await ev.target.files[0].text()));
+        menuSheet(['note-ok', 'Importé : ' + done.join(', ') + '.']); }
+      catch(e){ menuSheet(['note-err', 'Fichier invalide : ce n\'est pas une sauvegarde PVT Japon.']); }
+    };
+    el.querySelector('#mReset').onclick = () => {
+      if (!confirm('Tout effacer ?')) return;
+      state = defaults(); save(); closeSheet(); renderBudget(); renderPois(); renderWishes();
+    };
+  });
+}
+$('#menuBtn').addEventListener('click', () => menuSheet());
+
+renderBudget();
+renderPois();
+renderWishes();
+try { if (localStorage.getItem(PHONE_KEY) && innerWidth > 600) setPhone(true); } catch(e) {}
+</script>
+</body>
+</html>
