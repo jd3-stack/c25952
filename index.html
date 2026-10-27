@@ -2,6 +2,8 @@
 <html lang="fr">
 <head>
 <meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-qFvJGENkLnCpPrQfb3h6aYiHUhtpJ02CroPKSJpPb8Q=' 'sha256-u3dn4zikgBeJFFn+zN+eNzm3tRPOUs1XxGIDDFhZLts='; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob: https://server.arcgisonline.com; connect-src https://nominatim.openstreetmap.org https://api.frankfurter.app; manifest-src 'self'; base-uri 'none'; object-src 'none'; form-action 'none'">
+<meta name="referrer" content="strict-origin">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>PVT Japon</title>
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -14,7 +16,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Semi+Condensed:wght@500;600;700&family=Inter:wght@400;500;600;700&family=M+PLUS+1p:wght@500;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<link rel="stylesheet" href="leaflet.css" integrity="sha384-sHL9NAb7lN7rfvG5lfHpm643Xkcjzp4jFvuavGOndn6pjVqS6ny56CAt3nsEVT4H">
 <style>
 :root{
   --bg:#EEF0F3; --card:#FFFFFF; --ink:#101418; --muted:#5A6270; --line:#DCE0E6; --soft:#F6F7F9; --field:#C9CED6;
@@ -525,7 +527,7 @@ body.phone .homebar{display:block;position:absolute;bottom:8px;left:50%;width:13
 <div class="homebar"></div>
 </div>
 
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="leaflet.js" integrity="sha384-cxOPjt7s7Iz04uaHJceBmS+qpjv2JkIHNVcuOrM+YHwZOmJGBXI00mdUXEq65HTH"></script>
 <script>
 const MONTHS = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
 const SHORT  = ['Janv','Févr','Mars','Avr','Mai','Juin','Juil','Août','Sept','Oct','Nov','Déc'];
@@ -587,12 +589,64 @@ const defaults = () => ({
   vals:{}, globals:[], pois:[], wishes:[], homes:[]
 });
 
+/* Garde-fous : une donnée importée (ou abîmée) ne doit jamais casser l'app ni injecter quoi que ce soit.
+   Chaque champ est ramené à son type attendu, les listes et les textes sont bornés, le reste est ignoré. */
+const CURS = ['JPY', 'EUR'];
+const tStr = (v, max = 2000) => (typeof v === 'string' ? v : v == null ? '' : String(v)).slice(0, max);
+const tNum = (v, d = 0) => Number.isFinite(+v) && v !== null && v !== '' ? +v : d;
+const tId = v => /^[\w-]{1,40}$/.test(String(v ?? '')) ? String(v) : Math.random().toString(36).slice(2, 10);
+const tCur = v => CURS.includes(v) ? v : undefined;
+const tList = (a, f, max = 5000) => Array.isArray(a) ? a.slice(0, max).map(f).filter(Boolean) : [];
+const isObj = o => o && typeof o === 'object' && !Array.isArray(o);
+const tLatLng = (lat, lng) => { const a = tNum(lat, NaN), b = tNum(lng, NaN); return Math.abs(a) <= 90 && Math.abs(b) <= 180 ? [a, b] : null; };
+const tEntry = e => isObj(e) ? {id:tId(e.id), label:tStr(e.label, 200), amount:tNum(e.amount), cur:tCur(e.cur), orig:tNum(e.orig)} : null;
+function tPoi(p){
+  if (!isObj(p)) return null;
+  const ll = tLatLng(p.lat, p.lng); if (!ll) return null;
+  const o = {id:tId(p.id), lat:ll[0], lng:ll[1], name:tStr(p.name, 200) || 'Lieu', cat:Object.hasOwn(CATS, p.cat) ? p.cat : 'autre',
+    note:tStr(p.note), visited:!!p.visited};
+  if (p.city) o.city = tStr(p.city, 100);
+  if (p.address) o.address = tStr(p.address, 500);
+  return o;
+}
+function tHome(h){
+  if (!isObj(h)) return null;
+  const o = {id:tId(h.id), name:tStr(h.name, 200), address:tStr(h.address, 1000)};
+  const ll = tLatLng(h.lat, h.lng); if (ll){ o.lat = ll[0]; o.lng = ll[1]; }
+  return o.address ? o : null;
+}
+const tWish = w => isObj(w) ? {id:tId(w.id), label:tStr(w.label, 200) || 'Envie', kind:w.kind === 'acheter' ? 'acheter' : 'faire',
+  amount:Math.max(0, tNum(w.amount)), cur:tCur(w.cur), orig:tNum(w.orig), note:tStr(w.note), done:!!w.done} : null;
+function tBudget(d){
+  const def = defaults(), o = {};
+  o.rate = tNum(d.rate) > 0 ? tNum(d.rate) : def.rate;
+  o.start = tNum(d.start);
+  o.cats = tList(d.cats, c => isObj(c) ? {id:tId(c.id), name:tStr(c.name, 100) || 'Ligne', type:c.type === 'in' ? 'in' : 'out'} : null, 200);
+  const ids = new Set(o.cats.map(c => c.id));
+  o.vals = {}; if (isObj(d.vals)) Object.entries(d.vals).forEach(([k, a]) => { if (ids.has(k) && Array.isArray(a)) o.vals[k] = Array.from({length:12}, (_, m) => tNum(a[m])); });
+  o.items = {}; if (isObj(d.items)) Object.entries(d.items).forEach(([k, a]) => { if (ids.has(k) && Array.isArray(a)) o.items[k] = Array.from({length:12}, (_, m) => tList(a[m], tEntry, 500)); });
+  o.globals = tList(d.globals, g => isObj(g) ? {id:tId(g.id), label:tStr(g.label, 200), amount:tNum(g.amount),
+    m:Math.min(11, Math.max(-1, Math.trunc(tNum(g.m, -1)))), cur:tCur(g.cur), orig:tNum(g.orig)} : null, 500);
+  o.lineCur = {}; if (isObj(d.lineCur)) Object.entries(d.lineCur).forEach(([k, v]) => { if (ids.has(k) && tCur(v)) o.lineCur[k] = v; });
+  if (tCur(d.cur)) o.cur = d.cur;
+  if (tCur(d.startCur)) o.startCur = d.startCur;
+  if (d.startEur != null) o.startEur = tNum(d.startEur);
+  if (typeof d.rateAuto === 'boolean') o.rateAuto = d.rateAuto;
+  if (typeof d.rateDate === 'string') o.rateDate = tStr(d.rateDate, 10);
+  return o;
+}
+function cleanState(d){
+  if (!isObj(d)) return defaults();
+  if (d.home && !d.homes) d.homes = [d.home];
+  return {...tBudget(d), pois:tList(d.pois, tPoi), homes:tList(d.homes, tHome, 100), wishes:tList(d.wishes, tWish)};
+}
+
 let state;
-try { state = JSON.parse(localStorage.getItem(KEY)) || defaults(); } catch(e) { state = defaults(); }
+try { state = cleanState(JSON.parse(localStorage.getItem(KEY)) || defaults()); } catch(e) { state = defaults(); }
+// demande au navigateur de ne pas effacer ces données quand l'appareil manque de place (refusé sans gêne si non supporté)
+try { navigator.storage?.persist?.().catch(() => {}); } catch(e) {}
 state.globals ||= [];
 state.wishes ||= [];
-// un seul logement avant : on le passe dans la liste
-if (state.home){ state.homes = [{id:'h1', ...state.home}]; delete state.home; }
 state.homes ||= [];
 function save(){ try { localStorage.setItem(KEY, JSON.stringify(state)); } catch(e) {} }
 
@@ -1426,22 +1480,23 @@ async function deliverExport(json, name, el){
 // import : seules les familles présentes dans le fichier changent ; lieux, logements et envies sont ajoutés
 // (un élément déjà présent, même identifiant, est mis à jour) ; le budget du fichier remplace le budget
 function importData(d){
-  if (!d || typeof d !== 'object' || !(d.cats || ['pois', 'homes', 'wishes'].some(k => Array.isArray(d[k])) || d.home)) throw 0;
-  if (d.home && !d.homes) d.homes = [{id:uid(), ...d.home}];
+  if (!isObj(d) || !(Array.isArray(d.cats) || ['pois', 'homes', 'wishes'].some(k => Array.isArray(d[k])) || d.home)) throw 0;
+  if (d.home && !d.homes) d.homes = [d.home];
   const done = [];
   if (Array.isArray(d.cats)){
-    const def = defaults();
-    PARTS.budget.keys.forEach(k => { const v = d[k] !== undefined ? d[k] : def[k]; if (v === undefined) delete state[k]; else state[k] = v; });
-    state.vals ||= {}; state.globals ||= [];
+    const b = tBudget(d);
+    PARTS.budget.keys.forEach(k => { if (b[k] === undefined) delete state[k]; else state[k] = b[k]; });
     done.push('le budget');
   }
+  const clean = {pois:tPoi, homes:tHome, wishes:tWish};
   Object.entries(LISTS).forEach(([k, word]) => {
     if (!Array.isArray(d[k])) return;
+    const incoming = tList(d[k], clean[k]);
     const all = new Map(state[k].map(x => [x.id, x]));
     let added = 0;
-    d[k].forEach(x => { if (!x.id) x.id = uid(); if (!all.has(x.id)) added++; all.set(x.id, x); });
+    incoming.forEach(x => { if (!all.has(x.id)) added++; all.set(x.id, x); });
     state[k] = [...all.values()];
-    done.push(`${d[k].length} ${word}${d[k].length > 1 ? (word === 'lieu' ? 'x' : 's') : ''} (${added} nouveau${added > 1 ? 'x' : ''})`);
+    done.push(`${incoming.length} ${word}${incoming.length > 1 ? (word === 'lieu' ? 'x' : 's') : ''} (${added} nouveau${added > 1 ? 'x' : ''})`);
   });
   save(); renderBudget(); renderPois(); renderWishes();
   return done;
@@ -1459,14 +1514,22 @@ function exportSheet(){
     el.addEventListener('change', label); label();
     el.querySelector('#xGo').onclick = () => {
       const p = parts(); if (!p.length) return;
+      try { localStorage.setItem('pvt-japon-export', String(Date.now())); } catch(e) {}
       deliverExport(exportParts(p), `pvt-japon-${p.length === 4 ? 'tout' : p.join('-')}.json`, el);
     };
   });
 }
+// les données ne vivent que sur cet appareil : on rappelle depuis quand elles n'ont pas été sauvegardées
+function lastExport(){
+  let t = 0; try { t = +localStorage.getItem('pvt-japon-export') || 0; } catch(e) {}
+  if (!t) return 'Jamais sauvegardé : pense à exporter de temps en temps';
+  const days = Math.floor((Date.now() - t) / 864e5);
+  return 'Dernier export : ' + (days < 1 ? 'aujourd\'hui' : days === 1 ? 'hier' : `il y a ${days} jours`);
+}
 function menuSheet(note){
   openSheet(`<h3>Sauvegarde</h3>
     ${note ? `<p class="${note[0]}">${esc(note[1])}</p>` : ''}
-    <button class="btn menu-item" id="mExp">Exporter des données<small>Budget, lieux, logements, wishlist : tu choisis</small></button>
+    <button class="btn menu-item" id="mExp">Exporter des données<small>${lastExport()}</small></button>
     <button class="btn menu-item" id="mPaste">Coller des données<small>Le texte copié depuis « Exporter », sur cet appareil ou un autre</small></button>
     <label class="btn menu-item" style="color:var(--ink);font-size:14px">Importer un fichier<small>Ajoute ce que contient le fichier, sans effacer le reste</small><input type="file" id="mImp" accept="application/json" hidden></label>
     <button class="btn menu-item danger" id="mReset">Tout réinitialiser<small>Efface budget, points et wishlist</small></button>`, el => {
@@ -1481,7 +1544,8 @@ function menuSheet(note){
       };
     });
     el.querySelector('#mImp').onchange = async ev => {
-      try { const done = importData(JSON.parse(await ev.target.files[0].text()));
+      try { const f = ev.target.files[0]; if (f.size > 5e6) throw 0;   // une sauvegarde fait quelques dizaines de Ko
+        const done = importData(JSON.parse(await f.text()));
         menuSheet(['note-ok', 'Importé : ' + done.join(', ') + '.']); }
       catch(e){ menuSheet(['note-err', 'Fichier invalide : ce n\'est pas une sauvegarde PVT Japon.']); }
     };
