@@ -2,7 +2,7 @@
 <html lang="fr">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-qFvJGENkLnCpPrQfb3h6aYiHUhtpJ02CroPKSJpPb8Q=' 'sha256-mWUxlRD+v+1xLC4av7I7jCQGQGgsIUqW9EDCn2b530o='; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob: https://server.arcgisonline.com; connect-src https://nominatim.openstreetmap.org https://api.frankfurter.dev; manifest-src 'self'; base-uri 'none'; object-src 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-qFvJGENkLnCpPrQfb3h6aYiHUhtpJ02CroPKSJpPb8Q=' 'sha256-UtE2N7Z+zPs69WbxxapqviXWUoJDBhV/WTPoLawTrRw='; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob: https://server.arcgisonline.com; connect-src https://nominatim.openstreetmap.org https://api.frankfurter.dev; manifest-src 'self'; base-uri 'none'; object-src 'none'; form-action 'none'">
 <meta name="referrer" content="strict-origin">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>PVT Japon</title>
@@ -262,6 +262,7 @@ main{padding:0 16px}
 .type-head + .poi{border-top:none}
 /* export au choix */
 .sheet .parts label.check{margin-bottom:6px}
+.linkbtn{display:block;margin:0 0 10px;padding:4px 0;border:0;background:none;color:var(--muted);font:inherit;font-size:13px;text-decoration:underline;cursor:pointer}
 .copybox{width:100%;height:160px;font:12px/1.4 ui-monospace,Menlo,monospace;border:1px solid var(--field);border-radius:10px;padding:10px;background:var(--soft);color:var(--ink);margin:0 0 10px}
 .note-ok{font-size:13px;font-weight:600;color:var(--pos);margin:0 0 10px}
 .note-err{font-size:13px;font-weight:600;color:var(--neg-text);margin:0 0 10px}
@@ -1505,15 +1506,34 @@ function exportParts(parts){
   parts.forEach(p => PARTS[p].keys.forEach(k => { if (state[k] !== undefined) o[k] = state[k]; }));
   return JSON.stringify(o, null, 2);
 }
-// le texte est copié : on le colle dans un message, et l'autre fait « Coller des données »
+// envoi en fichier joint (menu de partage : Messages, WhatsApp, Mail, AirDrop…) : un long texte collé
+// dans un SMS serait découpé en centaines de messages ; sans menu de partage, le fichier est téléchargé
 async function deliverExport(json, name, el){
   const m = el.querySelector('#mMsg'); m.hidden = false;
-  try { await navigator.clipboard.writeText(json); m.className = 'note-ok'; m.textContent = 'Données copiées : envoie-les par message, l\'autre fait Sauvegarde › Coller des données.'; }
-  catch(e){
-    m.className = 'note-err'; m.textContent = 'Copie automatique refusée : sélectionne le texte ci-dessous et copie-le.';
-    let t = el.querySelector('#mCopy');
-    if (!t){ t = document.createElement('textarea'); t.className = 'copybox'; t.id = 'mCopy'; t.readOnly = true; m.after(t); }
-    t.value = json; t.select();
+  const file = new File([json], name, {type:'application/json'});
+  const note = (cls, txt) => { m.className = cls; m.textContent = txt; };
+  if (navigator.canShare?.({files:[file]})){
+    try { await navigator.share({files:[file]});
+      note('note-ok', 'Fichier envoyé. L\'autre l\'enregistre dans Fichiers, puis Sauvegarde › Importer un fichier.'); }
+    catch(e){ if (e.name !== 'AbortError') note('note-err', 'Partage impossible : réessaie, ou utilise « Copier en texte » ci-dessous.'); else m.hidden = true; }
+  } else {
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(file); a.download = name; a.click();
+    note('note-ok', 'Fichier ' + name + ' téléchargé : envoie-le en pièce jointe.');
+  }
+  if (!el.querySelector('#mText')){
+    const b = document.createElement('button'); b.className = 'linkbtn'; b.id = 'mText';
+    b.textContent = 'Copier en texte (iMessage ou WhatsApp seulement, pas en SMS)';
+    b.onclick = async () => {
+      try { await navigator.clipboard.writeText(json); note('note-ok', 'Texte copié : l\'autre fait Sauvegarde › Coller des données.'); }
+      catch(e){
+        note('note-err', 'Copie automatique refusée : sélectionne le texte ci-dessous et copie-le.');
+        let t = el.querySelector('#mCopy');
+        if (!t){ t = document.createElement('textarea'); t.className = 'copybox'; t.id = 'mCopy'; t.readOnly = true; b.after(t); }
+        t.value = json; t.select();
+      }
+    };
+    m.after(b);
   }
 }
 // import : seules les familles présentes dans le fichier changent ; lieux, logements et envies sont ajoutés
@@ -1570,7 +1590,7 @@ function menuSheet(note){
     ${note ? `<p class="${note[0]}">${esc(note[1])}</p>` : ''}
     <button class="btn menu-item" id="mExp">Exporter des données<small>${lastExport()}</small></button>
     <button class="btn menu-item" id="mPaste">Coller des données<small>Le texte copié depuis « Exporter », sur cet appareil ou un autre</small></button>
-    <label class="btn menu-item" style="color:var(--ink);font-size:14px">Importer un fichier<small>Ajoute ce que contient le fichier, sans effacer le reste</small><input type="file" id="mImp" accept="application/json" hidden></label>
+    <label class="btn menu-item" style="color:var(--ink);font-size:14px">Importer un fichier<small>Ajoute ce que contient le fichier, sans effacer le reste</small><input type="file" id="mImp" accept="application/json,.json" hidden></label>
     <button class="btn menu-item danger" id="mReset">Tout réinitialiser<small>Efface budget, points et wishlist</small></button>`, el => {
     el.querySelector('#mExp').onclick = exportSheet;
     el.querySelector('#mPaste').onclick = () => openSheet(`<h3>Coller des données</h3>
