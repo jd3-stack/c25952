@@ -2,7 +2,7 @@
 <html lang="fr">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-qFvJGENkLnCpPrQfb3h6aYiHUhtpJ02CroPKSJpPb8Q=' 'sha256-u3dn4zikgBeJFFn+zN+eNzm3tRPOUs1XxGIDDFhZLts='; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob: https://server.arcgisonline.com; connect-src https://nominatim.openstreetmap.org https://api.frankfurter.app; manifest-src 'self'; base-uri 'none'; object-src 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-qFvJGENkLnCpPrQfb3h6aYiHUhtpJ02CroPKSJpPb8Q=' 'sha256-mWUxlRD+v+1xLC4av7I7jCQGQGgsIUqW9EDCn2b530o='; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob: https://server.arcgisonline.com; connect-src https://nominatim.openstreetmap.org https://api.frankfurter.dev; manifest-src 'self'; base-uri 'none'; object-src 'none'; form-action 'none'">
 <meta name="referrer" content="strict-origin">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>PVT Japon</title>
@@ -198,6 +198,10 @@ main{padding:0 16px}
 .card h2 + .field{border-top:none}
 .field label{font-size:15px}
 .field .amt{width:150px}
+.rate-status{display:block;margin-top:2px;font-size:12px;color:var(--muted)}
+.rate-status:empty{display:none}
+.rate-status i{display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--rail);margin-right:5px;vertical-align:middle}
+.rate-status button{border:none;background:none;padding:0;margin-left:4px;color:var(--ink);font-size:12px;font-weight:600;text-decoration:underline;cursor:pointer}
 
 /* Carte */
 .search{display:flex;gap:8px;margin:16px 0 10px}
@@ -462,7 +466,7 @@ body.phone .homebar{display:block;position:absolute;bottom:8px;left:50%;width:13
       <div class="card">
         <h2>Réglages <small>設定</small></h2>
         <div class="field"><label for="start">Épargne au départ</label><div class="amt"><input id="start" inputmode="numeric"><button class="unit" id="startUnit" aria-label="Changer de devise">¥</button></div></div>
-        <div class="field"><label for="rate">Taux de change · 1 € =</label><div class="amt"><input id="rate" inputmode="decimal"><span class="small-label">¥</span></div></div>
+        <div class="field"><label for="rate">Taux de change · 1 € =<small class="rate-status" id="rateStatus"></small></label><div class="amt"><input id="rate" inputmode="decimal"><span class="small-label">¥</span></div></div>
       </div>
     </section>
 
@@ -739,6 +743,7 @@ function renderBudget(){
   renderInputs();
   renderGlobals();
   $('#rate').value = state.rate;
+  renderRateStatus();
   $('#chartCur').textContent = 'en ' + sym();
   document.querySelectorAll('#card-in,#card-out').forEach(el => el.classList.toggle('editing', editing));
   document.querySelectorAll('[data-edit-lines]').forEach(b => b.textContent = editing ? 'Terminé' : 'Modifier');
@@ -842,14 +847,48 @@ $('#startUnit').addEventListener('click', () => {
   if (state.startCur === 'EUR') state.startEur = state.start / state.rate; else delete state.startEur;
   save(); renderInputs(); $('#start').focus();
 });
+function applyRate(r){
+  state.rate = r;
+  if (startCur() === 'EUR' && state.startEur != null) state.start = state.startEur * r;
+}
 $('#rate').addEventListener('input', e => {
   const r = parseFloat(e.target.value.replace(',', '.'));
-  if (r > 0){
-    state.rate = r;
-    if (startCur() === 'EUR' && state.startEur != null) state.start = state.startEur * r;
-    save(); renderInputs(); renderSummary();
+  if (r > 0 && r !== state.rate){
+    applyRate(r);
+    state.rateAuto = false;   // saisi à la main : le taux ne bouge plus tout seul
+    save(); renderInputs(); renderSummary(); renderRateStatus();
   }
 });
+
+/* Taux du jour (BCE, via Frankfurter, sans clé) : à l'ouverture, au retour sur la page, puis toutes les heures.
+   Comme dans l'app Mac : state.rateAuto absent = automatique, false = taux saisi à la main. */
+const RATE_URL = 'https://api.frankfurter.dev/v1/latest?from=EUR&to=JPY';
+let rateFailed = false;
+function renderRateStatus(){
+  const el = $('#rateStatus'); if (!RATE_URL){ el.innerHTML = ''; return; }
+  if (state.rateAuto === false){ el.innerHTML = 'Manuel<button type="button" id="rateAutoBtn">Revenir au taux du jour</button>'; return; }
+  const day = state.rateDate ? new Date(state.rateDate + 'T12:00:00').toLocaleDateString('fr-FR', {day:'numeric', month:'short'}) : '';
+  el.innerHTML = rateFailed ? 'Auto · hors ligne, dernier taux gardé' : `<i></i>Taux BCE${day ? ' du ' + day : ''} · auto`;
+}
+async function refreshRate(){
+  if (!RATE_URL || state.rateAuto === false) return;
+  try {
+    const d = await fetch(RATE_URL, {cache:'no-store'}).then(r => r.json());
+    const r = +d?.rates?.JPY;
+    if (!(r > 0)) throw 0;
+    rateFailed = false;
+    if (state.rateAuto !== false && (r !== state.rate || d.date !== state.rateDate)){
+      applyRate(r); state.rateDate = String(d.date).slice(0, 10); save(); renderBudget();
+    }
+  } catch(e){ rateFailed = true; }
+  renderRateStatus();
+}
+document.addEventListener('click', e => {
+  if (!e.target.closest('#rateAutoBtn')) return;
+  delete state.rateAuto; save(); renderRateStatus(); refreshRate();
+});
+document.addEventListener('visibilitychange', () => { if (!document.hidden) refreshRate(); });
+setInterval(refreshRate, 36e5);
 
 $('#copyNext').addEventListener('click', () => {
   if (month === 11) return;
@@ -1560,6 +1599,7 @@ $('#menuBtn').addEventListener('click', () => menuSheet());
 renderBudget();
 renderPois();
 renderWishes();
+refreshRate();
 try { if (localStorage.getItem(PHONE_KEY) && innerWidth > 600) setPhone(true); } catch(e) {}
 </script>
 </body>
