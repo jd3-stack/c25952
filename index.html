@@ -374,10 +374,48 @@ body.phone .tabbar{padding-bottom:24px}
 body.phone #map{height:420px}
 body.phone .sheet{max-height:88%;padding-bottom:36px}
 body.phone .homebar{display:block;position:absolute;bottom:8px;left:50%;width:134px;height:5px;border-radius:3px;background:var(--ink);transform:translateX(-50%);z-index:1100;pointer-events:none}
+.gate{position:fixed;inset:0;z-index:5000;display:grid;place-items:center;padding:24px max(16px, env(safe-area-inset-left));background:var(--bg)}
+.gate[hidden]{display:none}
+.gate form{width:min(340px,100%);display:flex;flex-direction:column;gap:12px;text-align:center}
+.gate .logo{margin:0 auto 6px}
+.gate h1{margin:0;font-family:var(--num);font-size:26px}
+.gate p{margin:0;font-size:14px;color:var(--muted)}
+.gate input{height:50px;border:1px solid var(--field);border-radius:10px;padding:0 14px;font-size:17px;background:var(--card);color:var(--ink);outline:none;text-align:center}
+.gate input:focus{border-color:var(--ink);box-shadow:0 0 0 3px var(--sig)}
+.gate .err{color:var(--neg-text);font-weight:600;min-height:18px}
 </style>
 
 </head>
 <body>
+<div class="gate" id="gate" hidden>
+  <form id="gateForm" autocomplete="off">
+    <div class="logo" aria-hidden="true"><span>PVT</span><b>JP</b></div>
+    <h1>Accès privé</h1>
+    <p>Entre le mot de passe qu'on t'a donné.</p>
+    <input type="password" id="gatePw" aria-label="Mot de passe" autocomplete="current-password">
+    <button class="btn primary" type="submit">Entrer</button>
+    <p class="err" id="gateErr"></p>
+  </form>
+</div>
+<script>
+(() => {
+  const H = 'b0fd6e02b9aaa353dafee0b09abd5a7a3babf450470c1ddea8828bd374a639a4', K = 'pvt-japon-acces';
+  const ok = () => { try { return localStorage.getItem(K) === H; } catch(e){ return false; } };
+  const gate = document.getElementById('gate');
+  if (ok()) return;
+  gate.hidden = false;
+  setTimeout(() => document.getElementById('gatePw').focus(), 50);
+  document.getElementById('gateForm').addEventListener('submit', async e => {
+    e.preventDefault();
+    const pw = document.getElementById('gatePw').value.trim();
+    const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode('pvt-japon:' + pw));
+    const hex = [...new Uint8Array(buf)].map(b => b.toString(16).padStart(2, '0')).join('');
+    if (hex !== H){ document.getElementById('gateErr').textContent = 'Mot de passe incorrect.'; return; }
+    try { localStorage.setItem(K, H); } catch(e){}
+    gate.hidden = true;
+  });
+})();
+</script>
 <div class="device" id="device">
 <div class="statusbar" aria-hidden="true">
   <span>9:41</span><span class="island"></span>
