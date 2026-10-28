@@ -2,7 +2,7 @@
 <html lang="fr">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-qFvJGENkLnCpPrQfb3h6aYiHUhtpJ02CroPKSJpPb8Q=' 'sha256-/jzU52obZA9WPbN5Z0tDMzXxdo0WpNkyLX4tK0MDu9M='; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob: https://server.arcgisonline.com; connect-src https://nominatim.openstreetmap.org https://api.frankfurter.dev; manifest-src 'self'; base-uri 'none'; object-src 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-qFvJGENkLnCpPrQfb3h6aYiHUhtpJ02CroPKSJpPb8Q=' 'sha256-yOpbIFbwVuA2uHI0FJHqGYjNtrFUxnU1IGOkPcQWvYo='; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob: https://server.arcgisonline.com; connect-src https://nominatim.openstreetmap.org https://api.frankfurter.dev; manifest-src 'self'; base-uri 'none'; object-src 'none'; form-action 'none'">
 <meta name="referrer" content="strict-origin">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>PVT Japon</title>
@@ -819,8 +819,9 @@ function renderSummary(){
       <div><span>Dépenses</span><b>${money(out)}</b></div>
       <div><span>Épargne fin de mois</span><b class="${cum[month] < 0 ? 'n' : 'p'}">${money(cum[month])}</b></div>
     </div>`;
-  $('#sub-in').textContent = money(inc);
-  $('#sub-out').textContent = money(out);
+  // totaux en yens et en euros, comme la wishlist
+  $('#sub-in').textContent = `${yen(inc)} · ${eur(inc)}`;
+  $('#sub-out').textContent = `${yen(out)} · ${eur(out)}`;
   renderChart();
   let ti = 0, to = 0; for (let m = 0; m < 12; m++){ ti += sumType('in', m); to += sumType('out', m); }
   $('#totals').innerHTML = `
@@ -1020,7 +1021,7 @@ function renderGlobals(){
   $('#rows-gl').innerHTML = (list.length ? list.map(g =>
     `<div class="item gl" data-gl="${g.id}"><span>${esc(g.label)}<small>${whenLabel(g.m)}</small></span><b>${fmtEntry(g)}</b></div>`).join('')
     : '<div class="empty">Visa, billet d\'avion, assurance annuelle, caution…<br>Les charges payées en une fois.</div>')
-    + `<div class="subtotal"><span>Total</span><span>${money(globalsTotal())}</span></div>
+    + `<div class="subtotal"><span>Total</span><span>${yen(globalsTotal())} · ${eur(globalsTotal())}</span></div>
        <button class="btn" id="addGl">+ Dépense globale</button>`;
 }
 $('#rows-gl').addEventListener('click', e => {
