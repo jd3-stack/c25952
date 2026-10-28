@@ -2,7 +2,7 @@
 <html lang="fr">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-qFvJGENkLnCpPrQfb3h6aYiHUhtpJ02CroPKSJpPb8Q=' 'sha256-Zwheql8zffjM0UR/sPhQ2JkuJi7tTKI9JN7cGTvtTyM='; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob: https://server.arcgisonline.com; connect-src https://nominatim.openstreetmap.org https://api.frankfurter.dev; manifest-src 'self'; base-uri 'none'; object-src 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-qFvJGENkLnCpPrQfb3h6aYiHUhtpJ02CroPKSJpPb8Q=' 'sha256-/jzU52obZA9WPbN5Z0tDMzXxdo0WpNkyLX4tK0MDu9M='; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob: https://server.arcgisonline.com; connect-src https://nominatim.openstreetmap.org https://api.frankfurter.dev; manifest-src 'self'; base-uri 'none'; object-src 'none'; form-action 'none'">
 <meta name="referrer" content="strict-origin">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>PVT Japon</title>
@@ -88,12 +88,10 @@ main{padding:0 16px}
 .stn .code{position:relative;width:44px;height:44px;border-radius:10px;border:4px solid var(--c);background:var(--card);display:grid;place-items:center;
   font-family:var(--num);font-weight:700;font-size:15px}
 .stn .nm{font-size:13px;color:var(--muted)}
-.stn.warn{--c:var(--neg)}
 /* Mois passés (avant le mois en cours) : contour et ligne en rouge, jusqu'au mois en cours */
 .stn.past{--c:var(--neg)}
 .stn.past::before{background:var(--neg)}
 .stn.cur::before{background:linear-gradient(to right, var(--neg) 50%, var(--rail) 50%)}
-.stn.warn .nm{color:var(--neg-text);font-weight:600}
 .stn.on .code{background:var(--c);color:var(--on-rail);box-shadow:0 0 0 3px var(--sig)}
 .stn.on .nm{color:var(--ink);font-weight:700}
 
@@ -180,8 +178,11 @@ main{padding:0 16px}
 .btn.primary{background:var(--ink);color:var(--card);border-color:var(--ink);font-weight:700}
 .btn.danger{color:var(--neg-text);border:2px solid var(--neg)}
 .btn.grow{flex:1}
-.actions #copyNext{flex-basis:100%;min-height:50px;background:var(--ink);color:var(--card);border-color:var(--ink)}
-.actions .btn:not(#copyNext){flex:1}
+/* les deux boutons de copie se partagent la largeur, « + Ligne » passe dessous */
+.actions #copyNext,.actions #copyPick{flex:1 1 calc(50% - 5px);min-height:50px;background:var(--ink);color:var(--card);border-color:var(--ink);line-height:1.2}
+.actions #addLine{flex:1 1 100%}
+.monthpick{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:14px}
+.sheet .monthpick label.check{margin:0;min-height:44px;padding:0 10px;gap:8px}
 /* Fin de la page budget : passer au mois suivant (l'app rouvrira dessus) ou annuler */
 .month-actions{display:flex;flex-direction:column;gap:10px;margin:0 0 14px}
 #nextMonth{min-height:54px;background:var(--sig);color:#101418;border:2px solid #101418;font-family:var(--num);font-size:17px;letter-spacing:.04em}
@@ -189,8 +190,6 @@ main{padding:0 16px}
 
 /* Graphique + tableau des départs */
 #chart svg{width:100%;height:auto;display:block}
-.legend{display:flex;align-items:center;gap:6px;margin:6px 0 0;font-size:12px;color:var(--muted)}
-.legend i{width:14px;height:14px;border-radius:3px;background:repeating-linear-gradient(45deg,color-mix(in srgb,var(--neg) 35%,transparent) 0 3px,transparent 3px 6px)}
 .totals{margin:14px -16px -16px;padding:6px 16px 10px;background:var(--board)}
 .totals .tt{margin:8px 0 2px;font-family:var(--num);font-weight:700;font-size:15px;letter-spacing:.06em;text-transform:uppercase;color:#fff}
 .totals div{display:flex;align-items:baseline;gap:12px;padding:8px 0;border-top:1px solid rgba(255,255,255,.1)}
@@ -468,17 +467,17 @@ body.phone .homebar{display:block;position:absolute;bottom:8px;left:50%;width:13
     <section class="tab active" id="tab-budget">
       <nav class="months" id="months" aria-label="Mois"></nav>
       <div class="card hero" id="hero"></div>
-      <div class="card" id="card-in"><h2>Revenus <span><small>収入</small><button class="hd-btn" data-edit-lines>Modifier</button></span></h2><div id="rows-in"></div></div>
-      <div class="card" id="card-out"><h2>Dépenses <span><small>支出</small><button class="hd-btn" data-edit-lines>Modifier</button></span></h2><div id="rows-out"></div></div>
+      <div class="card" id="card-in"><h2>Revenus <span><small>収入</small><button class="hd-btn" data-edit-lines>Modifier</button><button class="hd-btn" data-reset="in">Réinitialiser</button></span></h2><div id="rows-in"></div></div>
+      <div class="card" id="card-out"><h2>Dépenses <span><small>支出</small><button class="hd-btn" data-edit-lines>Modifier</button><button class="hd-btn" data-reset="out">Réinitialiser</button></span></h2><div id="rows-out"></div></div>
       <div class="actions">
-        <button class="btn grow" id="copyNext">Copier ce mois sur les suivants</button>
+        <button class="btn grow" id="copyNext">Copier sur les suivants</button>
+        <button class="btn grow" id="copyPick">Copier sur certains mois</button>
         <button class="btn" id="addLine">+ Ligne</button>
       </div>
       <div class="card" id="card-gl"><h2>Dépenses globales <small>一括</small></h2><div id="rows-gl"></div></div>
       <div class="card">
-        <h2>Épargne sur l'année <small id="chartCur">en ¥</small></h2>
+        <h2>Dépenses sur l'année <small id="chartCur">en ¥</small></h2>
         <div id="chart"></div>
-        <p class="legend"><i></i>Mois en négatif</p>
         <div class="totals" id="totals"></div>
       </div>
       <div class="card">
@@ -758,7 +757,7 @@ function cumul(){ let c = state.start - globalsAt(-1), out = []; for (let m = 0;
 
 function renderMonths(){
   $('#months').innerHTML = SHORT.map((s, i) =>
-    `<button class="stn ${i === month ? 'on' : ''} ${balance(i) < 0 ? 'warn' : ''} ${i < curMonth ? 'past' : i === curMonth && i > 0 ? 'cur' : ''}" data-m="${i}" aria-label="${MONTHS[i]}${balance(i) < 0 ? ' (négatif)' : ''}"><span class="code">M${String(i + 1).padStart(2, '0')}</span><span class="nm">${s}</span></button>`).join('');
+    `<button class="stn ${i === month ? 'on' : ''} ${i < curMonth ? 'past' : i === curMonth && i > 0 ? 'cur' : ''}" data-m="${i}" aria-label="${MONTHS[i]}"><span class="code">M${String(i + 1).padStart(2, '0')}</span><span class="nm">${s}</span></button>`).join('');
   const box = $('#months'), on = box.querySelector('.on');
   box.scrollLeft = on.offsetLeft - box.clientWidth / 2 + on.offsetWidth / 2;
 }
@@ -773,7 +772,7 @@ function rowsHTML(type){
       ${editing ? `<input class="rename" data-rename="${c.id}" value="${esc(c.name)}" aria-label="Nom de la ligne">`
         : `<span class="name" title="${esc(c.name)}"><span>${esc(c.name)}</span>${n ? `<small>${n} dépense${n > 1 ? 's' : ''}</small>` : ''}</span>`}
       <div class="amt ${n ? 'locked' : ''}"><input data-id="${c.id}" ${n ? `readonly data-items="${c.id}"` : ''} inputmode="${modeOf(rc)}" placeholder="0" value="${toInput(v, rc)}"><button class="unit" data-unit="${c.id}" aria-label="Saisir en ${rc === 'EUR' ? 'yens' : 'euros'}">${symOf(rc)}</button></div>
-      ${type === 'out' ? `<button class="add ${n ? 'has' : ''}" data-items="${c.id}" aria-label="Détailler ${esc(c.name)}">+</button>` : ''}
+      <button class="add ${n ? 'has' : ''}" data-items="${c.id}" aria-label="Détailler ${esc(c.name)}">+</button>
     </div>`;
   }).join('') +`<div class="subtotal"><span>Total</span><span id="sub-${type}"></span></div>`;
 }
@@ -822,8 +821,7 @@ function renderSummary(){
     </div>`;
   $('#sub-in').textContent = money(inc);
   $('#sub-out').textContent = money(out);
-  document.querySelectorAll('#months .stn').forEach((c, i) => c.classList.toggle('warn', balance(i) < 0));
-  renderChart(cum);
+  renderChart();
   let ti = 0, to = 0; for (let m = 0; m < 12; m++){ ti += sumType('in', m); to += sumType('out', m); }
   $('#totals').innerHTML = `
     <p class="tt">Totaux annuels</p>
@@ -833,34 +831,33 @@ function renderSummary(){
     <div class="fin"><span>Épargne finale</span><b class="${cum[11] < 0 ? 'n' : ''}">${money(cum[11])}</b><i>${alt(cum[11])}</i></div>`;
 }
 
-function renderChart(cum){
+// dépenses de chaque mois : lignes de dépenses + dépenses globales payées ce mois-là
+const spentAt = m => sumType('out', m) + globalsAt(m);
+function renderChart(){
   const W = 340, H = 160, pl = 12, pr = 12, pt = 28, pb = 26;
-  const pts = [state.start, ...cum];
-  const min = Math.min(0, ...pts), max = Math.max(1, ...pts);
+  const vals = Array.from({length:12}, (_, m) => spentAt(m));
+  const max = Math.max(1, ...vals);
   const step = (W - pl - pr) / 11;
   const x = i => pl + i * step;
-  const y = v => pt + (max - v) / (max - min || 1) * (H - pt - pb);
-  const line = cum.map((v, i) => `${i ? 'L' : 'M'}${x(i).toFixed(1)},${y(v).toFixed(1)}`).join('');
-  const base = y(Math.max(min, 0));
+  const y = v => pt + (max - v) / max * (H - pt - pb);
+  const line = vals.map((v, i) => `${i ? 'L' : 'M'}${x(i).toFixed(1)},${y(v).toFixed(1)}`).join('');
+  const base = y(0);
   const area = `${line}L${x(11)},${base}L${x(0)},${base}Z`;
-  const sel = cum[month];
+  const sel = vals[month];
   const lx = Math.min(Math.max(x(month), 40), W - 40);
   const font = 'font-family="Barlow Semi Condensed, sans-serif"';
   $('#chart').innerHTML = `
-    <svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Évolution de l'épargne — ${MONTHS[month]} : ${money(sel)}">
+    <svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Dépenses par mois — ${MONTHS[month]} : ${money(sel)}">
       <defs>
         <linearGradient id="g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="var(--rail)" stop-opacity=".22"/><stop offset="1" stop-color="var(--rail)" stop-opacity="0"/></linearGradient>
-        <pattern id="hatch" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="3" height="6" fill="var(--neg)" opacity=".2"/></pattern>
       </defs>
-      ${cum.map((v, i) => balance(i) < 0 ? `<rect x="${(x(i) - step / 2).toFixed(1)}" y="${pt - 8}" width="${step.toFixed(1)}" height="${H - pb - pt + 8}" fill="url(#hatch)"/>` : '').join('')}
-      ${min < 0 ? `<line x1="${pl}" x2="${W - pr}" y1="${y(0)}" y2="${y(0)}" stroke="var(--neg)" stroke-dasharray="4 3" stroke-width="1.5"/>` : ''}
       <path d="${area}" fill="url(#g)"/>
       <path d="${line}" fill="none" stroke="var(--rail)" stroke-width="5" stroke-linejoin="round" stroke-linecap="round"/>
-      ${cum.map((v, i) => i === month ? '' : `<circle cx="${x(i)}" cy="${y(v)}" r="4" fill="var(--card)" stroke="${v < 0 ? 'var(--neg)' : 'var(--ink)'}" stroke-width="2"/>`).join('')}
+      ${vals.map((v, i) => i === month ? '' : `<circle cx="${x(i)}" cy="${y(v)}" r="4" fill="var(--card)" stroke="var(--ink)" stroke-width="2"/>`).join('')}
       <circle cx="${x(month)}" cy="${y(sel)}" r="9" fill="var(--sig)" stroke="var(--ink)" stroke-width="3"/>
       <text x="${lx}" y="16" text-anchor="middle" ${font} font-size="15" font-weight="700" fill="var(--ink)">${money(sel)}</text>
       ${SHORT.map((s, i) => `<text x="${x(i)}" y="${H - 6}" text-anchor="middle" ${font} font-size="12" font-weight="${i === month ? 700 : 600}" fill="${i === month ? 'var(--ink)' : 'var(--muted)'}">${String(i + 1).padStart(2, '0')}</text>`).join('')}
-      ${cum.map((v, i) => `<rect data-m="${i}" x="${x(i) - 13}" y="0" width="26" height="${H}" fill="transparent" style="cursor:pointer"/>`).join('')}
+      ${vals.map((v, i) => `<rect data-m="${i}" x="${x(i) - 13}" y="0" width="26" height="${H}" fill="transparent" style="cursor:pointer"/>`).join('')}
     </svg>`;
 }
 
@@ -940,8 +937,10 @@ document.addEventListener('click', e => {
 document.addEventListener('visibilitychange', () => { if (!document.hidden) refreshRate(); });
 setInterval(refreshRate, 36e5);
 
-$('#copyNext').addEventListener('click', () => {
-  if (month === 11) return;
+$('#copyNext').addEventListener('click', () => { if (month < 11) copySheet(false); });
+$('#copyPick').addEventListener('click', () => copySheet(true));
+/* Copie du mois affiché : sur tous les mois suivants, ou sur les mois cochés (pick) */
+function copySheet(pick){
   // on choisit les lignes à copier ; par défaut celles qui ont un montant ce mois-ci, les autres gardent leurs valeurs
   const group = (type, title) => {
     const cats = state.cats.filter(c => c.type === type); if (!cats.length) return '';
@@ -950,30 +949,52 @@ $('#copyNext').addEventListener('click', () => {
         return `<label class="check ${v ? '' : 'zero'}"><input type="checkbox" data-pick="${c.id}" data-type="${type}" ${v ? 'checked' : ''}>
           <span>${esc(c.name)}</span><b>${v ? fmtCur(v, rowCur(c.id)) : '—'}</b></label>`; }).join('')}</div>`;
   };
+  const others = [...MONTHS.keys()].filter(m => m !== month);
   openSheet(`<h3>Copier ${MONTHS[month].toLowerCase()}</h3>
-    <p class="small-label" style="margin:0 0 10px">Les lignes cochées remplaceront leurs montants (et leur détail) de ${MONTHS[month + 1].toLowerCase()} à décembre. Les autres ne bougent pas.</p>
+    ${pick ? `<div class="pick-head"><span class="small-label">Sur les mois</span><span><button type="button" data-mall>Tout</button><button type="button" data-mnone>Aucun</button></span></div>
+      <div class="monthpick">${others.map(m => `<label class="check"><input type="checkbox" data-month="${m}"><span>${SHORT[m]}</span></label>`).join('')}</div>
+      <p class="small-label" style="margin:0 0 10px">Les lignes cochées remplaceront leurs montants (et leur détail) sur les mois choisis. Les autres ne bougent pas.</p>`
+    : `<p class="small-label" style="margin:0 0 10px">Les lignes cochées remplaceront leurs montants (et leur détail) de ${MONTHS[month + 1].toLowerCase()} à décembre. Les autres ne bougent pas.</p>`}
     ${group('in', 'Revenus')}${group('out', 'Dépenses')}
     <div class="sheet-actions"><button class="btn grow" data-close>Annuler</button><button class="btn primary grow" id="okCopy"></button></div>`, el => {
     const picks = () => [...el.querySelectorAll('[data-pick]:checked')].map(i => i.dataset.pick);
-    const label = () => { const n = picks().length, b = el.querySelector('#okCopy');
-      b.textContent = n ? `Copier ${n} ligne${n > 1 ? 's' : ''}` : 'Rien à copier'; b.disabled = !n; b.style.opacity = n ? 1 : .4; };
+    const targets = () => pick ? [...el.querySelectorAll('[data-month]:checked')].map(i => +i.dataset.month) : others.filter(m => m > month);
+    const label = () => { const n = picks().length, t = targets().length, b = el.querySelector('#okCopy');
+      b.textContent = !t ? 'Choisis des mois' : n ? `Copier ${n} ligne${n > 1 ? 's' : ''}` : 'Rien à copier';
+      b.disabled = !n || !t; b.style.opacity = n && t ? 1 : .4; };
+    el.querySelectorAll('[data-mall],[data-mnone]').forEach(b => b.onclick = () => {
+      el.querySelectorAll('[data-month]').forEach(i => i.checked = 'mall' in b.dataset); label();
+    });
     el.addEventListener('change', label);
     el.querySelectorAll('[data-all],[data-none]').forEach(b => b.onclick = () => {
       el.querySelectorAll(`[data-type="${b.dataset.all || b.dataset.none}"]`).forEach(i => i.checked = !!b.dataset.all); label();
     });
     label();
     el.querySelector('#okCopy').onclick = () => {
-      const ids = picks(); if (!ids.length) return;
-      state.cats.filter(c => ids.includes(c.id)).forEach(c => { for (let m = month + 1; m < 12; m++){
+      const ids = picks(), ms = targets(); if (!ids.length || !ms.length) return;
+      state.cats.filter(c => ids.includes(c.id)).forEach(c => { for (const m of ms){
         if (items(c.id, month).length || items(c.id, m).length) setItems(c.id, m, items(c.id, month).map(it => ({...it, id:uid()})));
         setVal(c.id, m, val(c.id, month));
       } });
       save(); closeSheet(); renderBudget();
     };
   });
-});
+}
 
 document.addEventListener('click', e => { if (e.target.closest('[data-edit-lines]')){ editing = !editing; renderBudget(); } });
+// Réinitialiser : remet à 0 les revenus (ou les dépenses) du mois affiché, détail compris
+document.addEventListener('click', e => {
+  const b = e.target.closest('[data-reset]'); if (!b) return;
+  const type = b.dataset.reset, what = type === 'in' ? 'les revenus' : 'les dépenses';
+  openSheet(`<h3>Réinitialiser ${what} de ${MONTHS[month].toLowerCase()} ?</h3>
+    <p class="small-label" style="margin:0 0 14px">Tous les montants de ${what} de ce mois, et leur détail, repassent à 0. Les autres mois ne bougent pas.</p>
+    <div class="sheet-actions"><button class="btn grow" data-close>Annuler</button><button class="btn danger grow" id="okReset">Réinitialiser</button></div>`, el => {
+    el.querySelector('#okReset').onclick = () => {
+      state.cats.filter(c => c.type === type).forEach(c => { if (items(c.id, month).length) setItems(c.id, month, []); setVal(c.id, month, 0); });
+      save(); closeSheet(); renderBudget();
+    };
+  });
+});
 document.addEventListener('input', e => {
   const id = e.target.dataset?.rename; if (!id) return;
   const name = e.target.value.trim();
@@ -1057,7 +1078,7 @@ function openItems(id){
     <div class="items" id="itList"></div>
     <div class="subtotal"><span>Total</span><span id="itTotal"></span></div>
     <div class="additem">
-      <label>Libellé<input id="itLabel" placeholder="Ex. Konbini"></label>
+      <label>Libellé<input id="itLabel" placeholder="${c.type === 'in' ? 'Ex. Prime, cours particuliers' : 'Ex. Konbini'}"></label>
       <div class="fld a"><div class="small-label">Montant ${curPick(cur)}</div><input id="itAmt" aria-label="Montant" inputmode="${modeOf(cur)}" placeholder="0"></div>
     </div>
     <div class="sheet-actions"><button class="btn grow" data-close>Terminé</button><button class="btn primary grow" id="itAdd">Ajouter</button></div>`, el => {
