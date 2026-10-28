@@ -2,7 +2,7 @@
 <html lang="fr">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-qFvJGENkLnCpPrQfb3h6aYiHUhtpJ02CroPKSJpPb8Q=' 'sha256-7qF7aqoMGtopoTT097PpVNSNLd4NZvmJDDy6sj6t9Xs='; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob: https://server.arcgisonline.com; connect-src https://nominatim.openstreetmap.org https://api.frankfurter.dev; manifest-src 'self'; base-uri 'none'; object-src 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-qFvJGENkLnCpPrQfb3h6aYiHUhtpJ02CroPKSJpPb8Q=' 'sha256-mroIxOr5iqhEYniTSaFzndASQEBP180+U0cK9I9R148='; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob: https://server.arcgisonline.com; connect-src https://nominatim.openstreetmap.org https://api.frankfurter.dev; manifest-src 'self'; base-uri 'none'; object-src 'none'; form-action 'none'">
 <meta name="referrer" content="strict-origin">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>PVT Japon</title>
@@ -284,6 +284,15 @@ main{padding:0 16px}
 .pin{width:32px;height:32px;border-radius:9px;border:4px solid var(--c);background:#fff;color:var(--c);display:grid;place-items:center;
   font-family:var(--jp);font-weight:800;font-size:14px;box-shadow:0 2px 6px rgba(0,0,0,.35)}
 .pin.done{background:var(--c);color:#fff}
+/* Groupe de lieux proches (carte dézoomée) : leur nombre, un toucher zoome dessus */
+.pin.group{--c:#101418;width:auto;min-width:34px;padding:0 6px;font-family:var(--num);font-size:15px;cursor:pointer}
+.pin.group.big{min-width:40px;height:40px;font-size:16px}
+/* Fond sombre : la carte de rues est inversée pour suivre le fond noir */
+#map.dark .leaflet-tile-pane{filter:invert(1) hue-rotate(180deg) brightness(.95) contrast(.9)}
+/* Ma position */
+.locate{width:34px;height:34px;display:grid;place-items:center;background:#fff;color:#101418;border:none;cursor:pointer;font-size:18px;line-height:1}
+.locate.on{color:#1A73E8}
+.locate.wait{opacity:.5}
 /* Logement : la maison, en noir, toujours au-dessus des points */
 .pin.home{--c:var(--sig);width:38px;height:38px;border-radius:50%;background:#101418;color:#fff;font-size:16px}
 #homeCard{padding:4px 16px 12px}
@@ -1121,7 +1130,7 @@ try { const f = localStorage.getItem(FOND_KEY); if (f === 'noir' || f === 'blanc
 renderFondBtn();
 
 /* ---------- Map ---------- */
-let map, layer, tempMarker, filter = 'all';
+let map, layer, meLayer, tempMarker, filter = 'all';
 function initMap(){
   if (map){ setTimeout(() => map.invalidateSize(), 0); return; }
   if (!window.L){ $('#map').innerHTML = '<div class="empty">La carte a besoin d\'une connexion internet.</div>'; return; }
@@ -1129,6 +1138,9 @@ function initMap(){
   L.control.zoom({position:'bottomright'}).addTo(map);
   styleMap();
   layer = L.layerGroup().addTo(map);
+  meLayer = L.layerGroup().addTo(map);
+  locateControl().addTo(map);
+  map.on('zoomend', drawPins);
   map.on('click', e => homeDraft ? placeHome(e.latlng) : newPoi(e.latlng.lat, e.latlng.lng, ''));
   renderPois();
   if (state.pois.length) map.fitBounds(state.pois.map(p => [p.lat, p.lng]), {padding:[40, 40], maxZoom:12});
@@ -1137,12 +1149,12 @@ function initMap(){
 // fond de carte assorti au fond noir / blanc ; rappelé quand on change de fond
 let baseLayers = [];
 function styleMap(){
-  baseLayers.forEach(t => t.remove());
-  const tone = isDark() ? 'Dark' : 'Light';
-  const esri = name => `https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_${tone}_Gray_${name}/MapServer/tile/{z}/{y}/{x}`;
+  // carte de rues détaillée (gares, bâtiments, noms en japonais et en romaji) ; en fond noir, elle est inversée
+  map.getContainer().classList.toggle('dark', isDark());
+  if (baseLayers.length) return;
   baseLayers = [
-    L.tileLayer(esri('Base'), {maxZoom:16, attribution:'Tiles &copy; Esri'}).addTo(map),
-    L.tileLayer(esri('Reference'), {maxZoom:16}).addTo(map)
+    L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}',
+      {maxZoom:19, maxNativeZoom:18, attribution:'Tiles &copy; Esri'}).addTo(map)
   ];
 }
 
@@ -1150,13 +1162,74 @@ const homeIcon = window.L && L.divIcon({className:'', iconSize:[38, 38], iconAnc
 const pinIcon = p =>L.divIcon({className:'', iconSize:[32, 32], iconAnchor:[16, 16],
   html:`<div class="pin ${p.visited ? 'done' : ''}" style="--c:${CATS[p.cat].color}"><span>${CATS[p.cat].glyph}</span></div>`});
 
+/* Les lieux proches sont regroupés quand on dézoome : une pastille avec leur nombre ; un toucher zoome dessus.
+   À partir du zoom de quartier, chaque lieu a son épingle. */
+const GROUP_PX = 40, GROUP_UNTIL = 15;
+const groupIcon = n => L.divIcon({className:'', iconSize:null, iconAnchor:[n > 9 ? 20 : 17, n > 9 ? 20 : 16],
+  html:`<div class="pin group ${n > 9 ? 'big' : ''}">${n}</div>`});
+function drawPins(){
+  if (!layer) return;
+  layer.clearLayers();
+  const z = map.getZoom(), groups = [];
+  state.pois.forEach(p => {
+    const pt = map.project([p.lat, p.lng], z);
+    const g = z < GROUP_UNTIL && groups.find(g => g.pt.distanceTo(pt) < GROUP_PX);
+    if (!g) return groups.push({pt, pois:[p]});
+    g.pois.push(p);
+    g.pt = g.pt.multiplyBy(g.pois.length - 1).add(pt).divideBy(g.pois.length);   // centre du groupe
+  });
+  groups.forEach(g => {
+    if (g.pois.length === 1){
+      const p = g.pois[0];
+      return L.marker([p.lat, p.lng], {icon:pinIcon(p), title:p.name}).on('click', () => editPoi(p.id)).addTo(layer);
+    }
+    L.marker(map.unproject(g.pt, z), {icon:groupIcon(g.pois.length), title:`${g.pois.length} lieux`})
+      .on('click', () => map.flyToBounds(g.pois.map(p => [p.lat, p.lng]), {padding:[60, 60], maxZoom:Math.max(z + 2, GROUP_UNTIL), duration:.6}))
+      .addTo(layer);
+  });
+  state.homes.filter(h => h.lat != null).forEach(h => L.marker([h.lat, h.lng], {icon:homeIcon, title:homeName(h), zIndexOffset:1000})
+    .on('click', () => homeSheet({...h})).addTo(layer));
+}
+
+/* « Où suis-je » : la position du téléphone en point bleu. Elle reste dans le navigateur : rien n'est enregistré. */
+let watchId = null, meFirst = true, meLast = null;
+function locateControl(){
+  const C = L.Control.extend({options:{position:'bottomright'}, onAdd(){
+    const b = L.DomUtil.create('button', 'locate leaflet-bar');
+    b.type = 'button'; b.title = 'Où suis-je'; b.setAttribute('aria-label', 'Où suis-je'); b.textContent = '◎';
+    L.DomEvent.disableClickPropagation(b);
+    b.onclick = () => locateMe(b);
+    return b;
+  }});
+  return new C();
+}
+function locateMe(b){
+  if (meLast) return map.flyTo(meLast, Math.max(map.getZoom(), 16), {duration:.6});
+  if (!navigator.geolocation) return locateError('Ce navigateur ne donne pas la position.');
+  if (watchId != null) return;
+  b.classList.add('wait'); meFirst = true;
+  watchId = navigator.geolocation.watchPosition(pos => {
+    const ll = [pos.coords.latitude, pos.coords.longitude];
+    meLast = ll;
+    b.classList.remove('wait'); b.classList.add('on');
+    meLayer.clearLayers();
+    L.circle(ll, {radius:pos.coords.accuracy, color:'#1A73E8', weight:1, fillOpacity:.12, interactive:false}).addTo(meLayer);
+    L.circleMarker(ll, {radius:8, color:'#fff', weight:3, fillColor:'#1A73E8', fillOpacity:1, interactive:false}).addTo(meLayer);
+    if (meFirst){ meFirst = false; map.flyTo(ll, Math.max(map.getZoom(), 16), {duration:.6}); }
+  }, err => {
+    navigator.geolocation.clearWatch(watchId); watchId = null;
+    b.classList.remove('wait', 'on');
+    locateError(err.code === 1 ? 'La position n\'est pas autorisée. Sur iPhone : Réglages › Confidentialité › Service de localisation › Safari, puis « Lorsque l\'app est active ».'
+      : 'Position introuvable pour l\'instant. Réessaie dehors ou avec le réseau.');
+  }, {enableHighAccuracy:true, maximumAge:10000, timeout:20000});
+}
+function locateError(msg){
+  openSheet(`<h3>Où suis-je</h3><p>${esc(msg)}</p>
+    <div class="sheet-actions"><button class="btn primary grow" data-close>OK</button></div>`);
+}
+
 function renderPois(){
-  if (layer){
-    layer.clearLayers();
-    state.pois.forEach(p => L.marker([p.lat, p.lng], {icon:pinIcon(p), title:p.name}).on('click', () => editPoi(p.id)).addTo(layer));
-    state.homes.filter(h => h.lat != null).forEach(h => L.marker([h.lat, h.lng], {icon:homeIcon, title:homeName(h), zIndexOffset:1000})
-      .on('click', () => homeSheet({...h})).addTo(layer));
-  }
+  drawPins();
   renderHome();
   // un lieu visité quitte « Tous » et ne reste que dans « Visités »
   const visible = state.pois.filter(p => (filter === 'done') === !!p.visited);
