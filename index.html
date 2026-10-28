@@ -2,7 +2,7 @@
 <html lang="fr">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-qFvJGENkLnCpPrQfb3h6aYiHUhtpJ02CroPKSJpPb8Q=' 'sha256-ML+tI3ftXe6wgQtcE0RjOjwMycS4eJJrxOhfDscFukg='; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob: https://server.arcgisonline.com; connect-src https://nominatim.openstreetmap.org https://api.frankfurter.dev; manifest-src 'self'; base-uri 'none'; object-src 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-qFvJGENkLnCpPrQfb3h6aYiHUhtpJ02CroPKSJpPb8Q=' 'sha256-rO8PUskHs0MfEUVcp+TlxImONlwD8wI5tZo18ibqoz8='; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob: https://server.arcgisonline.com; connect-src https://nominatim.openstreetmap.org https://api.frankfurter.dev; manifest-src 'self'; base-uri 'none'; object-src 'none'; form-action 'none'">
 <meta name="referrer" content="strict-origin">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>PVT Japon</title>
@@ -178,6 +178,10 @@ main{padding:0 16px}
 .btn.grow{flex:1}
 .actions #copyNext{flex-basis:100%;min-height:50px;background:var(--ink);color:var(--card);border-color:var(--ink)}
 .actions .btn:not(#copyNext){flex:1}
+/* Fin de la page budget : passer au mois suivant (l'app rouvrira dessus) ou annuler */
+.month-actions{display:flex;flex-direction:column;gap:10px;margin:0 0 14px}
+#nextMonth{min-height:54px;background:var(--sig);color:#101418;border:2px solid #101418;font-family:var(--num);font-size:17px;letter-spacing:.04em}
+#nextMonth:disabled{opacity:.4;cursor:default}
 
 /* Graphique + tableau des départs */
 #chart svg{width:100%;height:auto;display:block}
@@ -478,6 +482,10 @@ body.phone .homebar{display:block;position:absolute;bottom:8px;left:50%;width:13
         <div class="field"><label for="start">Épargne au départ</label><div class="amt"><input id="start" inputmode="numeric"><button class="unit" id="startUnit" aria-label="Changer de devise">¥</button></div></div>
         <div class="field"><label for="rate">Taux de change · 1 € =<small class="rate-status" id="rateStatus"></small></label><div class="amt"><input id="rate" inputmode="decimal"><span class="small-label">¥</span></div></div>
       </div>
+      <div class="month-actions">
+        <button class="btn" id="nextMonth"></button>
+        <button class="btn" id="undoMonth"></button>
+      </div>
     </section>
 
     <section class="tab" id="tab-map">
@@ -672,7 +680,27 @@ state.homes ||= [];
 function save(){ try { localStorage.setItem(KEY, JSON.stringify(state)); } catch(e) {} }
 
 let month = 0, editing = false;
+// mois en cours : retenu sur cet appareil, l'app s'ouvre dessus (réglage local, hors des données exportées)
+const MONTH_KEY = 'pvt-japon-mois';
+let curMonth = 0;
+try { curMonth = Math.min(11, Math.max(0, Math.trunc(+localStorage.getItem(MONTH_KEY) || 0))); } catch(e) {}
+month = curMonth;
+function setCurMonth(m){
+  curMonth = month = m;
+  try { localStorage.setItem(MONTH_KEY, String(m)); } catch(e) {}
+  renderBudget();
+  window.scrollTo({top:0, behavior:'smooth'});
+}
+function renderMonthActions(){
+  const next = $('#nextMonth'), undo = $('#undoMonth');
+  next.disabled = curMonth >= 11;
+  next.textContent = curMonth < 11 ? `PASSER AU MOIS SUIVANT · ${MONTHS[curMonth + 1].toUpperCase()}` : 'DÉCEMBRE EST LE DERNIER MOIS';
+  undo.hidden = curMonth === 0;
+  if (curMonth > 0) undo.textContent = `Annuler · revenir à ${MONTHS[curMonth - 1].toLowerCase()}`;
+}
 const $ = s => document.querySelector(s);
+$('#nextMonth').addEventListener('click', () => { if (curMonth < 11) setCurMonth(curMonth + 1); });
+$('#undoMonth').addEventListener('click', () => { if (curMonth > 0) setCurMonth(curMonth - 1); });
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const uid = () => Math.random().toString(36).slice(2, 10);
 const fold = s => String(s ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();   // recherche sans accents ni majuscules
@@ -757,6 +785,7 @@ function renderInputs(){
 
 function renderBudget(){
   renderMonths();
+  renderMonthActions();
   renderInputs();
   renderGlobals();
   $('#rate').value = state.rate;
