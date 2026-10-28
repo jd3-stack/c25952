@@ -2,7 +2,7 @@
 <html lang="fr">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-qFvJGENkLnCpPrQfb3h6aYiHUhtpJ02CroPKSJpPb8Q=' 'sha256-UtE2N7Z+zPs69WbxxapqviXWUoJDBhV/WTPoLawTrRw='; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob: https://server.arcgisonline.com; connect-src https://nominatim.openstreetmap.org https://api.frankfurter.dev; manifest-src 'self'; base-uri 'none'; object-src 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-qFvJGENkLnCpPrQfb3h6aYiHUhtpJ02CroPKSJpPb8Q=' 'sha256-7qF7aqoMGtopoTT097PpVNSNLd4NZvmJDDy6sj6t9Xs='; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob: https://server.arcgisonline.com; connect-src https://nominatim.openstreetmap.org https://api.frankfurter.dev; manifest-src 'self'; base-uri 'none'; object-src 'none'; form-action 'none'">
 <meta name="referrer" content="strict-origin">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>PVT Japon</title>
@@ -621,7 +621,14 @@ function tHome(h){
   return o.address ? o : null;
 }
 const tWish = w => isObj(w) ? {id:tId(w.id), label:tStr(w.label, 200) || 'Envie', kind:w.kind === 'acheter' ? 'acheter' : 'faire',
-  amount:Math.max(0, tNum(w.amount)), cur:tCur(w.cur), orig:tNum(w.orig), note:tStr(w.note), done:!!w.done} : null;
+  amount:Math.max(0, tNum(w.amount)), cur:tCur(w.cur), orig:tNum(w.orig), note:tStr(w.note), done:!!w.done, paid:tPaid(w.paid)} : null;
+// la dépense ajoutée au budget quand un achat est coché : une ligne un mois donné, ou une dépense globale (sans line)
+function tPaid(p){
+  if (!isObj(p) || !/^[\w-]{1,40}$/.test(String(p.entry ?? ''))) return undefined;
+  const o = {m:Math.min(11, Math.max(-1, Math.trunc(tNum(p.m, -1)))), entry:String(p.entry)};
+  if (p.line && /^[\w-]{1,40}$/.test(String(p.line))) o.line = String(p.line);
+  return o;
+}
 function tBudget(d){
   const def = defaults(), o = {};
   o.rate = tNum(d.rate) > 0 ? tNum(d.rate) : def.rate;
@@ -1432,7 +1439,7 @@ function renderWishes(){
   $('#wishList').innerHTML = list.length ? list.map(w => `
     <div class="poi wish ${w.done ? 'done' : ''}" style="--c:${WISH[w.kind].color}">
       <button class="g" data-tick="${w.id}" aria-label="${w.done ? 'Marquer à faire' : 'Marquer comme fait'}">${WISH[w.kind].glyph}</button>
-      <div class="t"><b>${esc(w.label)}</b><span>${WISH[w.kind].label}${w.done ? (w.kind === 'acheter' ? ' · acheté' : ' · fait') : ''}</span>${w.note ? `<p>${esc(w.note)}</p>` : ''}</div>
+      <div class="t"><b>${esc(w.label)}</b><span>${WISH[w.kind].label}${w.done ? (w.kind === 'acheter' ? ' · acheté' : ' · fait') : ''}${w.paid ? ' · au budget ' + (w.paid.m < 0 ? 'avant le départ' : 'en ' + MONTHS[w.paid.m].toLowerCase()) : ''}</span>${w.note ? `<p>${esc(w.note)}</p>` : ''}</div>
       ${w.amount ? `<span class="price">${fmtEntry(w)}</span>` : ''}
       <button class="edit" data-wedit="${w.id}">Modifier</button>
     </div>`).join('')
@@ -1451,7 +1458,14 @@ $('#wishFilters').addEventListener('click', e => {
 });
 $('#wishList').addEventListener('click', e => {
   const t = e.target.closest('[data-tick]');
-  if (t){ const w = state.wishes.find(w => w.id === t.dataset.tick); w.done = !w.done; save(); return renderWishes(); }
+  if (t){
+    const w = state.wishes.find(w => w.id === t.dataset.tick); w.done = !w.done;
+    if (!w.done) unpayWish(w);
+    save(); renderWishes();
+    // un achat coché : proposer de l'ajouter au budget (le prix se saisit ou se corrige dans la fenêtre)
+    if (w.done && w.kind === 'acheter' && !w.paid) paySheet(w);
+    return;
+  }
   const ed = e.target.closest('[data-wedit]');
   if (ed) wishSheet(state.wishes.find(w => w.id === ed.dataset.wedit), false);
 });
@@ -1484,10 +1498,68 @@ function wishSheet(w, isNew){
       Object.assign(w, {label, kind, amount, cur, orig:cur === 'EUR' ? eurNum(amt.value) : amount,
         note:el.querySelector('#wNote').value.trim(), done:el.querySelector('#wDone').checked});
       if (isNew) state.wishes.unshift(w);
+      if (!w.done) unpayWish(w);
       save(); closeSheet(); renderWishes();
     };
     const del = el.querySelector('#wDel');
     if (del) del.onclick = () => { state.wishes = state.wishes.filter(x => x.id !== w.id); save(); closeSheet(); renderWishes(); };
+  });
+}
+/* Ajoute l'achat d'une envie au budget : dans une ligne un mois donné, ou en dépense globale avant le départ. */
+function payWish(w, line, m){
+  if (w.paid) return;
+  const e = {id:uid(), label:w.label, amount:w.amount, cur:w.cur, orig:w.orig};
+  if (line && m >= 0){
+    // un montant saisi sans détail est gardé comme première dépense
+    const list = items(line, m).length ? items(line, m) : val(line, m) ? [{id:uid(), label:'Montant saisi', amount:val(line, m)}] : [];
+    setItems(line, m, [...list, e]);
+    w.paid = {line, m, entry:e.id};
+  } else {
+    state.globals.push({...e, m:-1});
+    w.paid = {m:-1, entry:e.id};
+  }
+}
+/* Retire du budget la dépense ajoutée pour une envie (quand on la décoche). */
+function unpayWish(w){
+  const p = w.paid; if (!p) return;
+  if (p.line && p.m >= 0){
+    if (items(p.line, p.m).some(it => it.id === p.entry)) setItems(p.line, p.m, items(p.line, p.m).filter(it => it.id !== p.entry));
+  } else state.globals = state.globals.filter(g => g.id !== p.entry);
+  delete w.paid;
+}
+function paySheet(w){
+  // le mois en cours pendant le PVT (2027), sinon avant le départ ou décembre
+  const now = new Date(), y = now.getFullYear();
+  const m0 = y < 2027 ? -1 : y > 2027 ? 11 : now.getMonth();
+  const outs = state.cats.filter(c => c.type === 'out');
+  const def = (outs.find(c => c.id === 'o8') || outs[0] || {}).id;
+  let cur = w.cur || curNow();
+  openSheet(`<h3>Ajouter au budget ?</h3>
+    <p><b>« ${esc(w.label)} »</b></p>
+    <div class="fld"><div class="small-label">Prix payé ${curPick(cur)}</div><input id="pAmt" aria-label="Prix payé" inputmode="${modeOf(cur)}" placeholder="0"
+      value="${cur === 'EUR' && w.orig ? eurStr(w.orig) : toInput(w.amount, cur)}"></div>
+    <label>Payé<select id="pWhen">${[-1, ...MONTHS.keys()].map(m =>
+      `<option value="${m}" ${m === m0 ? 'selected' : ''}>${m < 0 ? 'Avant le départ' : 'En ' + MONTHS[m].toLowerCase()}</option>`).join('')}</select></label>
+    <label id="pLineBox">Sur la ligne<select id="pLine">${outs.map(c =>
+      `<option value="${c.id}" ${c.id === def ? 'selected' : ''}>${esc(c.name)}</option>`).join('')}</select></label>
+    <p class="hint" id="pGlobal">Ajouté aux dépenses globales.</p>
+    <div class="sheet-actions">
+      <button class="btn grow" data-close>Pas au budget</button>
+      <button class="btn primary grow" id="pOk">Ajouter</button>
+    </div>`, el => {
+    const when = el.querySelector('#pWhen'), line = el.querySelector('#pLine'), amt = el.querySelector('#pAmt');
+    bindCurPick(el, amt, c => cur = c);
+    const sync = () => { const g = +when.value < 0; el.querySelector('#pLineBox').style.display = g ? 'none' : ''; el.querySelector('#pGlobal').style.display = g ? '' : 'none'; };
+    when.onchange = sync; sync();
+    el.querySelector('#pOk').onclick = () => {
+      const m = +when.value, amount = fromInput(amt.value, cur);
+      if (amount <= 0) return amt.focus();
+      if (m >= 0 && !line.value) return;
+      // le prix payé devient celui de l'envie
+      Object.assign(w, {amount, cur, orig:cur === 'EUR' ? eurNum(amt.value) : amount});
+      payWish(w, m >= 0 ? line.value : null, m);
+      save(); closeSheet(); renderWishes(); renderBudget();
+    };
   });
 }
 
