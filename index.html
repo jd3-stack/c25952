@@ -2,7 +2,7 @@
 <html lang="fr">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-qFvJGENkLnCpPrQfb3h6aYiHUhtpJ02CroPKSJpPb8Q=' 'sha256-yOpbIFbwVuA2uHI0FJHqGYjNtrFUxnU1IGOkPcQWvYo='; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob: https://server.arcgisonline.com; connect-src https://nominatim.openstreetmap.org https://api.frankfurter.dev; manifest-src 'self'; base-uri 'none'; object-src 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-qFvJGENkLnCpPrQfb3h6aYiHUhtpJ02CroPKSJpPb8Q=' 'sha256-JRXvD+RqbRwtKzzCEMgP7UzgncUt3CkPWE+sfGgF2po='; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob: https://server.arcgisonline.com; connect-src https://nominatim.openstreetmap.org https://api.frankfurter.dev; manifest-src 'self'; base-uri 'none'; object-src 'none'; form-action 'none'">
 <meta name="referrer" content="strict-origin">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>PVT Japon</title>
@@ -275,6 +275,17 @@ main{padding:0 16px}
 .note-err{font-size:13px;font-weight:600;color:var(--neg-text);margin:0 0 10px}
 .parts label.check span{flex:1}
 .parts label.check small{display:block;font-size:12px;font-weight:400;color:var(--muted)}
+/* choix des centres d'intérêt à exporter */
+.poipick{margin:-2px 0 10px 12px}
+.poipick[hidden]{display:none}
+.poipick .cities-btn.open::after{transform:translateY(-30%) rotate(-135deg)}
+#xPoiList{margin-top:8px}
+#xPoiList input[type=search]{width:100%;height:44px;border:1px solid var(--field);background:var(--soft);border-radius:10px;padding:0 12px;font-size:15px;color:var(--ink);margin-bottom:6px}
+#xPoiList .picklist{max-height:300px;overflow-y:auto;padding-right:2px}
+.xcity[hidden],#xPoiList label[hidden]{display:none}
+.xcity-name{margin:10px 0 6px}
+.xglyph{font-style:normal;font-family:var(--jp);font-weight:800;color:var(--c);margin-right:8px}
+#xPoiList .picklist label.check b.xvis{font-family:var(--sans);font-size:11px;font-weight:600;color:var(--pos)}
 /* Wishlist : même ligne que les points, la case kanji se coche */
 .poi.wish{cursor:default}
 .poi.wish .g{padding:0;cursor:pointer}
@@ -1701,9 +1712,11 @@ const PARTS = {
   wishes:{label:'Wishlist', keys:['wishes'], sub:() => `${state.wishes.length} envie${state.wishes.length > 1 ? 's' : ''}`}
 };
 const LISTS = {pois:'lieu', homes:'logement', wishes:'envie'};
-function exportParts(parts){
+// poiIds : les centres d'intérêt choisis (sinon tous)
+function exportParts(parts, poiIds){
   const o = {app:'pvt-japon', parts};
   parts.forEach(p => PARTS[p].keys.forEach(k => { if (state[k] !== undefined) o[k] = state[k]; }));
+  if (o.pois && poiIds) o.pois = o.pois.filter(p => poiIds.has(p.id));
   return JSON.stringify(o, null, 2);
 }
 // envoi en fichier joint (menu de partage : Messages, WhatsApp, Mail, AirDrop…) : un long texte collé
@@ -1760,21 +1773,68 @@ function importData(d){
   save(); renderBudget(); renderPois(); renderWishes();
   return done;
 }
+/* Export : liste déroulante pour choisir les centres d'intérêt à envoyer (par ville, avec recherche) */
+function poiPickHTML(){
+  const byCity = {};
+  state.pois.forEach(p => (byCity[cityOf(p)] ||= []).push(p));
+  return `<div class="poipick" id="xPois">
+    <button type="button" class="cities-btn" id="xPoiBtn" aria-expanded="false"></button>
+    <div id="xPoiList" hidden>
+      <input type="search" id="xPoiQ" placeholder="Rechercher un lieu ou une ville…" aria-label="Rechercher un lieu">
+      <div class="pick-head"><span class="small-label">Lieux à exporter</span><span><button type="button" data-xall>Tout</button><button type="button" data-xnone>Aucun</button></span></div>
+      <div class="picklist">${Object.keys(byCity).sort(byName).map(c => `<div class="xcity" data-city-name="${esc(fold(c))}">
+        <p class="small-label xcity-name">${esc(c)}</p>
+        ${byCity[c].sort((a, b) => byName(a.name, b.name)).map(p => `<label class="check" data-q="${esc(fold(p.name + ' ' + c))}">
+          <input type="checkbox" data-xpoi="${p.id}" checked><span><i class="xglyph" style="--c:${CATS[p.cat].color}">${CATS[p.cat].glyph}</i>${esc(p.name)}</span>${p.visited ? '<b class="xvis">visité</b>' : ''}</label>`).join('')}
+      </div>`).join('')}</div>
+    </div>
+  </div>`;
+}
+function bindPoiPick(el, label){
+  const btn = el.querySelector('#xPoiBtn'); if (!btn) return;
+  const list = el.querySelector('#xPoiList'), q = el.querySelector('#xPoiQ');
+  btn.onclick = () => { list.hidden = !list.hidden; btn.setAttribute('aria-expanded', String(!list.hidden)); btn.classList.toggle('open', !list.hidden); };
+  // la recherche masque les lieux qui ne correspondent pas ; « Tout » / « Aucun » ne touchent que les lieux affichés
+  q.oninput = () => {
+    const t = fold(q.value.trim());
+    el.querySelectorAll('.xcity').forEach(g => {
+      let any = false;
+      g.querySelectorAll('label[data-q]').forEach(l => { const on = !t || l.dataset.q.includes(t); l.hidden = !on; any ||= on; });
+      g.hidden = !any;
+    });
+  };
+  const setAll = on => { el.querySelectorAll('label[data-q]:not([hidden]) [data-xpoi]').forEach(i => i.checked = on); label(); };
+  el.querySelector('[data-xall]').onclick = () => setAll(true);
+  el.querySelector('[data-xnone]').onclick = () => setAll(false);
+}
 function exportSheet(){
   openSheet(`<h3>Exporter</h3>
     <p class="small-label" style="margin:0 0 10px">Choisis ce que tu envoies : à l'import, seules ces données seront ajoutées ou remplacées chez l'autre.</p>
     <div class="parts">${Object.entries(PARTS).map(([k, p]) =>
-      `<label class="check"><input type="checkbox" data-part="${k}" checked><span>${p.label}<small>${esc(p.sub())}</small></span></label>`).join('')}</div>
+      `<label class="check"><input type="checkbox" data-part="${k}" checked><span>${p.label}<small>${esc(p.sub())}</small></span></label>`
+      + (k === 'pois' && state.pois.length ? poiPickHTML() : '')).join('')}</div>
     <p id="mMsg" hidden></p>
     <div class="sheet-actions"><button class="btn grow" data-close>Annuler</button><button class="btn primary grow" id="xGo"></button></div>`, el => {
     const parts = () => [...el.querySelectorAll('[data-part]:checked')].map(i => i.dataset.part);
-    const label = () => { const n = parts().length, b = el.querySelector('#xGo');
-      b.textContent = n ? 'Exporter' : 'Rien de coché'; b.disabled = !n; b.style.opacity = n ? 1 : .4; };
-    el.addEventListener('change', label); label();
+    const poiIds = () => new Set([...el.querySelectorAll('[data-xpoi]:checked')].map(i => i.dataset.xpoi));
+    const label = () => {
+      const p = parts(), n = p.length, b = el.querySelector('#xGo');
+      const box = el.querySelector('#xPois'), nPoi = poiIds().size;
+      if (box){
+        box.hidden = !p.includes('pois');
+        el.querySelector('#xPoiBtn').textContent = nPoi === state.pois.length ? `Tous les lieux (${nPoi})` : `${nPoi} lieu${nPoi > 1 ? 'x' : ''} sur ${state.pois.length}`;
+      }
+      const noPoi = p.includes('pois') && box && !nPoi;
+      b.textContent = !n ? 'Rien de coché' : noPoi ? 'Aucun lieu choisi' : 'Exporter';
+      b.disabled = !n || noPoi; b.style.opacity = n && !noPoi ? 1 : .4;
+    };
+    el.addEventListener('change', label);
+    bindPoiPick(el, label);
+    label();
     el.querySelector('#xGo').onclick = () => {
       const p = parts(); if (!p.length) return;
       try { localStorage.setItem('pvt-japon-export', String(Date.now())); } catch(e) {}
-      deliverExport(exportParts(p), `pvt-japon-${p.length === 4 ? 'tout' : p.join('-')}.json`, el);
+      deliverExport(exportParts(p, el.querySelector('#xPois') ? poiIds() : null), `pvt-japon-${p.length === 4 ? 'tout' : p.join('-')}.json`, el);
     };
   });
 }
