@@ -2,7 +2,7 @@
 <html lang="fr">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-qFvJGENkLnCpPrQfb3h6aYiHUhtpJ02CroPKSJpPb8Q=' 'sha256-JRXvD+RqbRwtKzzCEMgP7UzgncUt3CkPWE+sfGgF2po='; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob: https://server.arcgisonline.com; connect-src https://nominatim.openstreetmap.org https://api.frankfurter.dev; manifest-src 'self'; base-uri 'none'; object-src 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-qFvJGENkLnCpPrQfb3h6aYiHUhtpJ02CroPKSJpPb8Q=' 'sha256-X5F5Cz0uZ7mguSvexRt8gSZUxLrOurSNpE2mCYGnItg='; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob: https://server.arcgisonline.com; connect-src https://nominatim.openstreetmap.org https://api.frankfurter.dev; manifest-src 'self'; base-uri 'none'; object-src 'none'; form-action 'none'">
 <meta name="referrer" content="strict-origin">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>PVT Japon</title>
@@ -282,9 +282,9 @@ main{padding:0 16px}
 #xPoiList{margin-top:8px}
 #xPoiList input[type=search]{width:100%;height:44px;border:1px solid var(--field);background:var(--soft);border-radius:10px;padding:0 12px;font-size:15px;color:var(--ink);margin-bottom:6px}
 #xPoiList .picklist{max-height:300px;overflow-y:auto;padding-right:2px}
-.xcity[hidden],#xPoiList label[hidden]{display:none}
+.xcity[hidden],.xtype[hidden],#xPoiList label[hidden]{display:none}
+#xPoiList .type-head{margin:6px 0 6px}
 .xcity-name{margin:10px 0 6px}
-.xglyph{font-style:normal;font-family:var(--jp);font-weight:800;color:var(--c);margin-right:8px}
 #xPoiList .picklist label.check b.xvis{font-family:var(--sans);font-size:11px;font-weight:600;color:var(--pos)}
 /* Wishlist : même ligne que les points, la case kanji se coche */
 .poi.wish{cursor:default}
@@ -1777,6 +1777,7 @@ function importData(d){
 function poiPickHTML(){
   const byCity = {};
   state.pois.forEach(p => (byCity[cityOf(p)] ||= []).push(p));
+  // même classement que la liste des centres d'intérêt : villes A→Z, puis par type, puis par nom
   return `<div class="poipick" id="xPois">
     <button type="button" class="cities-btn" id="xPoiBtn" aria-expanded="false"></button>
     <div id="xPoiList" hidden>
@@ -1784,8 +1785,11 @@ function poiPickHTML(){
       <div class="pick-head"><span class="small-label">Lieux à exporter</span><span><button type="button" data-xall>Tout</button><button type="button" data-xnone>Aucun</button></span></div>
       <div class="picklist">${Object.keys(byCity).sort(byName).map(c => `<div class="xcity" data-city-name="${esc(fold(c))}">
         <p class="small-label xcity-name">${esc(c)}</p>
-        ${byCity[c].sort((a, b) => byName(a.name, b.name)).map(p => `<label class="check" data-q="${esc(fold(p.name + ' ' + c))}">
-          <input type="checkbox" data-xpoi="${p.id}" checked><span><i class="xglyph" style="--c:${CATS[p.cat].color}">${CATS[p.cat].glyph}</i>${esc(p.name)}</span>${p.visited ? '<b class="xvis">visité</b>' : ''}</label>`).join('')}
+        ${catOrder().filter(k => byCity[c].some(p => p.cat === k)).map(k => `<div class="xtype">
+          <div class="type-head" style="--c:${CATS[k].color}">${CATS[k].glyph} ${CATS[k].label}</div>
+          ${byCity[c].filter(p => p.cat === k).sort((a, b) => byName(a.name, b.name)).map(p => `<label class="check" data-q="${esc(fold(p.name + ' ' + c + ' ' + CATS[k].label))}">
+            <input type="checkbox" data-xpoi="${p.id}" checked><span>${esc(p.name)}</span>${p.visited ? '<b class="xvis">visité</b>' : ''}</label>`).join('')}
+        </div>`).join('')}
       </div>`).join('')}</div>
     </div>
   </div>`;
@@ -1797,11 +1801,12 @@ function bindPoiPick(el, label){
   // la recherche masque les lieux qui ne correspondent pas ; « Tout » / « Aucun » ne touchent que les lieux affichés
   q.oninput = () => {
     const t = fold(q.value.trim());
-    el.querySelectorAll('.xcity').forEach(g => {
+    el.querySelectorAll('.xtype').forEach(g => {
       let any = false;
       g.querySelectorAll('label[data-q]').forEach(l => { const on = !t || l.dataset.q.includes(t); l.hidden = !on; any ||= on; });
       g.hidden = !any;
     });
+    el.querySelectorAll('.xcity').forEach(g => g.hidden = !g.querySelector('.xtype:not([hidden])'));
   };
   const setAll = on => { el.querySelectorAll('label[data-q]:not([hidden]) [data-xpoi]').forEach(i => i.checked = on); label(); };
   el.querySelector('[data-xall]').onclick = () => setAll(true);
