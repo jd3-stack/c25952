@@ -2,7 +2,7 @@
 <html lang="fr">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-qFvJGENkLnCpPrQfb3h6aYiHUhtpJ02CroPKSJpPb8Q=' 'sha256-rO8PUskHs0MfEUVcp+TlxImONlwD8wI5tZo18ibqoz8='; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob: https://server.arcgisonline.com; connect-src https://nominatim.openstreetmap.org https://api.frankfurter.dev; manifest-src 'self'; base-uri 'none'; object-src 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-qFvJGENkLnCpPrQfb3h6aYiHUhtpJ02CroPKSJpPb8Q=' 'sha256-Zwheql8zffjM0UR/sPhQ2JkuJi7tTKI9JN7cGTvtTyM='; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob: https://server.arcgisonline.com; connect-src https://nominatim.openstreetmap.org https://api.frankfurter.dev; manifest-src 'self'; base-uri 'none'; object-src 'none'; form-action 'none'">
 <meta name="referrer" content="strict-origin">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>PVT Japon</title>
@@ -89,6 +89,10 @@ main{padding:0 16px}
   font-family:var(--num);font-weight:700;font-size:15px}
 .stn .nm{font-size:13px;color:var(--muted)}
 .stn.warn{--c:var(--neg)}
+/* Mois passés (avant le mois en cours) : contour et ligne en rouge, jusqu'au mois en cours */
+.stn.past{--c:var(--neg)}
+.stn.past::before{background:var(--neg)}
+.stn.cur::before{background:linear-gradient(to right, var(--neg) 50%, var(--rail) 50%)}
 .stn.warn .nm{color:var(--neg-text);font-weight:600}
 .stn.on .code{background:var(--c);color:var(--on-rail);box-shadow:0 0 0 3px var(--sig)}
 .stn.on .nm{color:var(--ink);font-weight:700}
@@ -754,7 +758,7 @@ function cumul(){ let c = state.start - globalsAt(-1), out = []; for (let m = 0;
 
 function renderMonths(){
   $('#months').innerHTML = SHORT.map((s, i) =>
-    `<button class="stn ${i === month ? 'on' : ''} ${balance(i) < 0 ? 'warn' : ''}" data-m="${i}" aria-label="${MONTHS[i]}${balance(i) < 0 ? ' (négatif)' : ''}"><span class="code">M${String(i + 1).padStart(2, '0')}</span><span class="nm">${s}</span></button>`).join('');
+    `<button class="stn ${i === month ? 'on' : ''} ${balance(i) < 0 ? 'warn' : ''} ${i < curMonth ? 'past' : i === curMonth && i > 0 ? 'cur' : ''}" data-m="${i}" aria-label="${MONTHS[i]}${balance(i) < 0 ? ' (négatif)' : ''}"><span class="code">M${String(i + 1).padStart(2, '0')}</span><span class="nm">${s}</span></button>`).join('');
   const box = $('#months'), on = box.querySelector('.on');
   box.scrollLeft = on.offsetLeft - box.clientWidth / 2 + on.offsetWidth / 2;
 }
