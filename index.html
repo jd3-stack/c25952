@@ -2,7 +2,7 @@
 <html lang="fr">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-qFvJGENkLnCpPrQfb3h6aYiHUhtpJ02CroPKSJpPb8Q=' 'sha256-mroIxOr5iqhEYniTSaFzndASQEBP180+U0cK9I9R148='; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob: https://server.arcgisonline.com; connect-src https://nominatim.openstreetmap.org https://api.frankfurter.dev; manifest-src 'self'; base-uri 'none'; object-src 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-qFvJGENkLnCpPrQfb3h6aYiHUhtpJ02CroPKSJpPb8Q=' 'sha256-ML+tI3ftXe6wgQtcE0RjOjwMycS4eJJrxOhfDscFukg='; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob: https://server.arcgisonline.com; connect-src https://nominatim.openstreetmap.org https://api.frankfurter.dev; manifest-src 'self'; base-uri 'none'; object-src 'none'; form-action 'none'">
 <meta name="referrer" content="strict-origin">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>PVT Japon</title>
@@ -1162,9 +1162,9 @@ const homeIcon = window.L && L.divIcon({className:'', iconSize:[38, 38], iconAnc
 const pinIcon = p =>L.divIcon({className:'', iconSize:[32, 32], iconAnchor:[16, 16],
   html:`<div class="pin ${p.visited ? 'done' : ''}" style="--c:${CATS[p.cat].color}"><span>${CATS[p.cat].glyph}</span></div>`});
 
-/* Les lieux proches sont regroupés quand on dézoome : une pastille avec leur nombre ; un toucher zoome dessus.
-   À partir du zoom de quartier, chaque lieu a son épingle. */
-const GROUP_PX = 40, GROUP_UNTIL = 15;
+/* En vue large (région, Japon), les épingles qui se chevauchent deviennent une pastille avec leur nombre ;
+   un toucher zoome dessus. À l'échelle d'une ville, chaque lieu a son épingle. */
+const GROUP_PX = 30, GROUP_UNTIL = 12;
 const groupIcon = n => L.divIcon({className:'', iconSize:null, iconAnchor:[n > 9 ? 20 : 17, n > 9 ? 20 : 16],
   html:`<div class="pin group ${n > 9 ? 'big' : ''}">${n}</div>`});
 function drawPins(){
