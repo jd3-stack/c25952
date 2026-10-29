@@ -2,7 +2,7 @@
 <html lang="fr">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-qFvJGENkLnCpPrQfb3h6aYiHUhtpJ02CroPKSJpPb8Q=' 'sha256-tRqzLjV5U9jMyJTrBq3tT/fOtd6J0DGGDsEQToFwc38='; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob: https://server.arcgisonline.com https://upload.wikimedia.org https://thumb.wikimedia.org; connect-src https://nominatim.openstreetmap.org https://api.frankfurter.dev https://en.wikipedia.org https://fr.wikipedia.org; manifest-src 'self'; base-uri 'none'; object-src 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-qFvJGENkLnCpPrQfb3h6aYiHUhtpJ02CroPKSJpPb8Q=' 'sha256-b/QyzttDT2e9uWgESfQEMdZrLeDH0B4ujBth1KI8CuA='; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob: https://server.arcgisonline.com https://upload.wikimedia.org https://thumb.wikimedia.org; connect-src https://nominatim.openstreetmap.org https://api.frankfurter.dev https://en.wikipedia.org https://fr.wikipedia.org; manifest-src 'self'; base-uri 'none'; object-src 'none'; form-action 'none'">
 <meta name="referrer" content="strict-origin">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>PVT Japon</title>
@@ -651,7 +651,7 @@ function tPoi(p){
   if (p.city) o.city = tStr(p.city, 100);
   if (p.address) o.address = tStr(p.address, 500);
   // photo Wikipédia : seulement une image de Wikimedia et un lien vers Wikipédia
-  if (typeof p.photo === 'string' && (p.photo === '' || /^https:\/\/upload\.wikimedia\.org\/[^\s"'<>]+$/.test(p.photo))) o.photo = p.photo.slice(0, 600);
+  if (typeof p.photo === 'string' && (p.photo === '' || /^https:\/\/(upload|thumb)\.wikimedia\.org\/[^\s"'<>]+$/.test(p.photo))) o.photo = p.photo.slice(0, 600);
   if (typeof p.wiki === 'string' && /^https:\/\/(en|fr|ja)\.wikipedia\.org\/[^\s"'<>]+$/.test(p.wiki)) o.wiki = p.wiki.slice(0, 600);
   return o;
 }
