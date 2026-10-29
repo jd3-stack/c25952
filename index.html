@@ -2,7 +2,7 @@
 <html lang="fr">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-qFvJGENkLnCpPrQfb3h6aYiHUhtpJ02CroPKSJpPb8Q=' 'sha256-cBK5YHpHR8Z/1IK3YdZ5R9HuUYOndiAkytE70p/+NaE='; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob: https://server.arcgisonline.com https://upload.wikimedia.org https://thumb.wikimedia.org; connect-src https://nominatim.openstreetmap.org https://api.frankfurter.dev https://en.wikipedia.org https://fr.wikipedia.org; manifest-src 'self'; base-uri 'none'; object-src 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-qFvJGENkLnCpPrQfb3h6aYiHUhtpJ02CroPKSJpPb8Q=' 'sha256-Q9kX10jFh39a8NV+wfG4fANciUNplDRGD+C53trY1Ec='; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob: https://server.arcgisonline.com https://upload.wikimedia.org https://thumb.wikimedia.org https://commons.wikimedia.org; connect-src https://nominatim.openstreetmap.org https://api.frankfurter.dev https://en.wikipedia.org https://fr.wikipedia.org https://query.wikidata.org; manifest-src 'self'; base-uri 'none'; object-src 'none'; form-action 'none'">
 <meta name="referrer" content="strict-origin">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>PVT Japon</title>
@@ -651,8 +651,8 @@ function tPoi(p){
   if (p.city) o.city = tStr(p.city, 100);
   if (p.address) o.address = tStr(p.address, 500);
   // photo Wikipédia : seulement une image de Wikimedia et un lien vers Wikipédia
-  if (typeof p.photo === 'string' && (p.photo === '' || /^https:\/\/(upload|thumb)\.wikimedia\.org\/[^\s"'<>]+$/.test(p.photo))) o.photo = p.photo.slice(0, 600);
-  if (typeof p.wiki === 'string' && /^https:\/\/(en|fr|ja)\.wikipedia\.org\/[^\s"'<>]+$/.test(p.wiki)) o.wiki = p.wiki.slice(0, 600);
+  if (typeof p.photo === 'string' && (p.photo === '' || /^https:\/\/((upload|thumb)\.wikimedia\.org\/|commons\.wikimedia\.org\/wiki\/Special:FilePath\/)[^\s"'<>]+$/.test(p.photo))) o.photo = p.photo.slice(0, 600);
+  if (typeof p.wiki === 'string' && /^https:\/\/((en|fr|ja)\.wikipedia\.org\/|www\.wikidata\.org\/wiki\/Q\d+$)[^\s"'<>]*$/.test(p.wiki)) o.wiki = p.wiki.slice(0, 600);
   return o;
 }
 function tHome(h){
@@ -1448,8 +1448,9 @@ function poiSheet(p, isNew){
   }, () => { if (tempMarker){ tempMarker.remove(); tempMarker = null; } });
 }
 /* ---------- Photos Wikipédia ----------
-   Pour chaque lieu, on cherche l'article Wikipédia (anglais, puis français, puis autour de sa position) dont le titre
-   reprend le nom du lieu et qui est à moins de 3 km ; on garde le lien de sa photo principale (rien n'est stocké d'autre).
+   Pour chaque lieu, on cherche l'article Wikipédia (anglais, puis français) dont le titre ou un de ses autres noms
+   (redirections) reprend le nom du lieu, à moins de 3 km ; sinon les éléments Wikidata à moins de 250 m, comparés à leurs
+   noms en anglais, français et romaji ; sinon les articles autour du lieu. On garde le lien de la photo (rien d'autre).
    Wikipédia limite les requêtes : une à la fois, espacées, et une pause d'une minute s'il demande de ralentir. */
 const W_TR = {chateau:'castle', parc:'park', sanctuaire:'shrine', jardin:'garden', mont:'mount', musee:'museum', tour:'tower', pont:'bridge',
   lac:'lake', gare:'station', ile:'island', jinja:'shrine', jingu:'shrine', taisha:'shrine', dera:'temple', ji:'temple', mt:'mount', jo:'castle'};
@@ -1461,8 +1462,8 @@ const wDist = (a, b, c, d) => { const r = Math.PI / 180; return 6371000 * Math.h
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 async function wikiPages(host, params){
   const u = new URL(`https://${host}/w/api.php`);
-  Object.entries({action:'query', format:'json', formatversion:2, origin:'*', prop:'pageimages|coordinates|info', piprop:'thumbnail',
-    pithumbsize:640, colimit:'max', inprop:'url', ...params}).forEach(([k, v]) => u.searchParams.set(k, v));
+  Object.entries({action:'query', format:'json', formatversion:2, origin:'*', prop:'pageimages|coordinates|info|redirects', piprop:'thumbnail',
+    pithumbsize:640, colimit:'max', inprop:'url', rdlimit:'max', ...params}).forEach(([k, v]) => u.searchParams.set(k, v));
   const r = await fetch(u);
   if (r.status === 429) throw 'busy';
   if (!r.ok) throw 'http';
@@ -1471,27 +1472,56 @@ async function wikiPages(host, params){
 // le titre doit reprendre au moins 60 % des mots du nom (hors mots génériques comme « temple ») ; le type précisé
 // (castle, tower…) n'est exigé que si le reste du nom n'est qu'un nom de ville (« Château de Fukuoka » ≠ « Fukuoka »)
 const W_CITY = new Set(CITIES.map(c => fold(c[0])));
+function wName(name){
+  const nw = wWords(name), core = [...nw].filter(w => !W_GEN.has(w)), gen = [...nw].filter(w => W_GEN.has(w));
+  return {nw, gen, key:core.length ? core : [...nw], onlyCity:core.every(w => W_CITY.has(w))};
+}
+// note d'un titre (ou d'un autre nom) par rapport au nom du lieu : 0 = refusé
+function wScore(n, title){
+  const tw = wWords(title);
+  // score sur les mots distinctifs ou sur tous les mots, le meilleur des deux ; au moins un mot distinctif commun
+  const hits = n.key.filter(w => tw.has(w)).length;
+  const sc = hits ? Math.max(hits / n.key.length, [...n.nw].filter(w => tw.has(w)).length / n.nw.size) : 0;
+  if (sc < .6 || (n.onlyCity && n.gen.length && !n.gen.some(w => tw.has(w)))) return 0;
+  // le titre désigne un autre type de lieu (« … Stadium » pour un « … Park ») : refusé
+  if (n.gen.length && [...tw].some(w => W_GEN.has(w)) && !n.gen.some(w => tw.has(w))) return 0;
+  return sc;
+}
 function wikiPick(pages, p, maxd){
-  const nw = wWords(p.name), core = [...nw].filter(w => !W_GEN.has(w)), gen = [...nw].filter(w => W_GEN.has(w));
-  const key = core.length ? core : [...nw];
-  const onlyCity = core.every(w => W_CITY.has(w));
+  const n = wName(p.name);
   let best = null;
   pages.forEach(pg => {
     const co = pg.coordinates?.[0];
     if (!pg.thumbnail || (co && wDist(p.lat, p.lng, co.lat, co.lon) > maxd)) return;
-    const tw = wWords(pg.title);
-    // score sur les mots distinctifs ou sur tous les mots, le meilleur des deux ; au moins un mot distinctif commun
-    const hits = key.filter(w => tw.has(w)).length;
-    const sc = hits ? Math.max(hits / key.length, [...nw].filter(w => tw.has(w)).length / nw.size) : 0;
+    // le titre et ses autres noms (redirections : « Golden Pavilion » → « Kinkaku-ji »)
+    const sc = Math.max(...[pg.title, ...(pg.redirects || []).map(r => r.title)].map(t => wScore(n, t)));
     // article sans coordonnées : seulement si tous les mots du nom y sont (et pas juste une ville)
-    if (!co && (sc < 1 || onlyCity)) return;
-    if (sc < .6 || (onlyCity && gen.length && !gen.some(w => tw.has(w)))) return;
-    // le titre désigne un autre type de lieu (« … Stadium » pour un « … Park ») : refusé
-    const tgen = [...tw].filter(w => W_GEN.has(w));
-    if (gen.length && tgen.length && !gen.some(w => tw.has(w))) return;
+    if (!sc || (!co && (sc < 1 || n.onlyCity))) return;
     if (!best || sc > best.sc) best = {sc, pg};
   });
   return best && {photo:best.pg.thumbnail.source, wiki:best.pg.fullurl};
+}
+// éléments Wikidata avec photo à moins de 250 m, comparés à leurs noms (anglais, français, romaji) et alias
+async function wikidataNear(p){
+  const q = `SELECT ?item ?img ?article (GROUP_CONCAT(DISTINCT ?name; separator="|") AS ?names) WHERE {
+    SERVICE wikibase:around { ?item wdt:P625 ?c . bd:serviceParam wikibase:center "Point(${+p.lng} ${+p.lat})"^^geo:wktLiteral . bd:serviceParam wikibase:radius "0.25" . }
+    ?item wdt:P18 ?img . { ?item rdfs:label ?name } UNION { ?item skos:altLabel ?name }
+    FILTER(LANG(?name) IN ("en", "fr", "ja-latn"))
+    OPTIONAL { ?article schema:about ?item ; schema:isPartOf <https://en.wikipedia.org/> }
+  } GROUP BY ?item ?img ?article LIMIT 60`;
+  const r = await fetch('https://query.wikidata.org/sparql?format=json&query=' + encodeURIComponent(q));
+  if (r.status === 429) throw 'busy';
+  if (!r.ok) throw 'http';
+  const n = wName(p.name);
+  let best = null;
+  (await r.json()).results.bindings.forEach(b => {
+    const sc = Math.max(...b.names.value.split('|').map(t => wScore(n, t)));
+    if (sc && (!best || sc > best.sc)) best = {sc, b};
+  });
+  if (!best) return null;
+  const file = best.b.img.value.replace(/^http:/, 'https:');
+  const item = best.b.item.value.replace(/^http:\/\/www\.wikidata\.org\/entity\//, 'https://www.wikidata.org/wiki/');
+  return {photo:file + '?width=640', wiki:best.b.article?.value || item};
 }
 async function findPhoto(p){
   for (const host of ['en.wikipedia.org', 'fr.wikipedia.org']){
@@ -1499,17 +1529,20 @@ async function findPhoto(p){
     await sleep(1200);
     if (hit) return hit;
   }
+  const near = await wikidataNear(p);
+  await sleep(1200);
+  if (near) return near;
   const hit = wikiPick(await wikiPages('en.wikipedia.org', {generator:'geosearch', ggscoord:`${p.lat}|${p.lng}`, ggsradius:600, ggslimit:10}), p, 600);
   await sleep(1200);
   return hit;
 }
 // les lieux jamais cherchés (photo absente) passent un par un ; sans réseau, on réessaiera à la prochaine ouverture
 let photoBusy = false, photoRender = 0;
-// règle de recherche assouplie (version 2) : les lieux restés sans photo sont cherchés une nouvelle fois
+// règle de recherche élargie (version 3 : autres noms + Wikidata) : les lieux restés sans photo sont cherchés à nouveau
 try {
-  if ((+localStorage.getItem('pvt-japon-photo-regle') || 1) < 2){
+  if ((+localStorage.getItem('pvt-japon-photo-regle') || 1) < 3){
     state.pois.forEach(p => { if (p.photo === '' && !p.wiki) delete p.photo; });
-    save(); localStorage.setItem('pvt-japon-photo-regle', '2');
+    save(); localStorage.setItem('pvt-japon-photo-regle', '3');
   }
 } catch(e) {}
 async function startPhotoQueue(){
