@@ -2,7 +2,7 @@
 <html lang="fr">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-qFvJGENkLnCpPrQfb3h6aYiHUhtpJ02CroPKSJpPb8Q=' 'sha256-X5F5Cz0uZ7mguSvexRt8gSZUxLrOurSNpE2mCYGnItg='; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob: https://server.arcgisonline.com; connect-src https://nominatim.openstreetmap.org https://api.frankfurter.dev; manifest-src 'self'; base-uri 'none'; object-src 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-qFvJGENkLnCpPrQfb3h6aYiHUhtpJ02CroPKSJpPb8Q=' 'sha256-tRqzLjV5U9jMyJTrBq3tT/fOtd6J0DGGDsEQToFwc38='; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob: https://server.arcgisonline.com https://upload.wikimedia.org https://thumb.wikimedia.org; connect-src https://nominatim.openstreetmap.org https://api.frankfurter.dev https://en.wikipedia.org https://fr.wikipedia.org; manifest-src 'self'; base-uri 'none'; object-src 'none'; form-action 'none'">
 <meta name="referrer" content="strict-origin">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>PVT Japon</title>
@@ -250,6 +250,13 @@ main{padding:0 16px}
 .home-row .links a{font-size:13px;padding:4px 0}
 .poi .pcopy{border:none;background:none;padding:4px 0 0;color:var(--ink);font-size:12px;font-weight:600;text-decoration:underline;cursor:pointer}
 .poi .pcopy.ok{color:var(--pos);text-decoration:none}
+.poi .thumb{flex:none;width:52px;height:52px;border-radius:10px;object-fit:cover;background:var(--soft)}
+/* photo Wikipédia dans la fiche d'un lieu */
+.pphoto{margin:0 0 14px}
+.pphoto img{display:block;width:100%;height:180px;object-fit:cover;border-radius:12px;background:var(--soft)}
+.pphoto figcaption,.pphoto-none{display:flex;flex-wrap:wrap;align-items:center;gap:4px 12px;margin:6px 0 0;font-size:12px;color:var(--muted)}
+.pphoto-none{margin:0 0 14px}
+.pphoto a,.pphoto button,.pphoto-none button{color:var(--ink);font-size:12px;font-weight:600;text-decoration:underline;border:none;background:none;padding:4px 0;cursor:pointer}
 .poi .edit{border:1px solid var(--field);background:var(--card);border-radius:8px;padding:0 12px;min-height:36px;cursor:pointer;font-size:13px;font-weight:600}
 .empty{text-align:center;color:var(--muted);font-size:14px;padding:18px 8px}
 /* recherche + filtres des listes */
@@ -643,6 +650,9 @@ function tPoi(p){
     note:tStr(p.note), visited:!!p.visited};
   if (p.city) o.city = tStr(p.city, 100);
   if (p.address) o.address = tStr(p.address, 500);
+  // photo Wikipédia : seulement une image de Wikimedia et un lien vers Wikipédia
+  if (typeof p.photo === 'string' && (p.photo === '' || /^https:\/\/upload\.wikimedia\.org\/[^\s"'<>]+$/.test(p.photo))) o.photo = p.photo.slice(0, 600);
+  if (typeof p.wiki === 'string' && /^https:\/\/(en|fr|ja)\.wikipedia\.org\/[^\s"'<>]+$/.test(p.wiki)) o.wiki = p.wiki.slice(0, 600);
   return o;
 }
 function tHome(h){
@@ -1325,6 +1335,7 @@ function renderPois(){
       <div class="g">${CATS[p.cat].glyph}</div>
       <div class="t"><b>${esc(p.name)}</b><span>${CATS[p.cat].label}${p.visited ? ' · visité' : ''}</span>${p.address ? `<span class="addr">${esc(p.address)}</span>` : ''}${p.note ? `<p>${esc(p.note)}</p>` : ''}
         <div class="links">${plansLink(p.name, p.lat, p.lng, p.address, 'plans')}${p.address ? `<button type="button" class="pcopy" data-pcopy="${p.id}">Copier l'adresse</button>` : ''}</div></div>
+      ${p.photo ? `<img class="thumb" src="${esc(p.photo)}" alt="" loading="lazy">` : ''}
       <button class="edit" data-edit="${p.id}">Modifier</button>
     </div>`;
   // villes par ordre alphabétique ; dans chaque ville, les lieux regroupés par type puis par nom
@@ -1395,6 +1406,7 @@ $('#poiList').addEventListener('click', async e => {
 function poiSheet(p, isNew){
   let cat = p.cat;
   openSheet(`<h3>${isNew ? 'Nouveau point' : 'Modifier le point'}</h3>
+    <div id="pPhoto">${photoBlock(p)}</div>
     <label>Nom<input id="pName" value="${esc(p.name)}" placeholder="Ex. Kiyomizu-dera"></label>
     <div class="small-label">Catégorie</div>
     <div class="catpick">${Object.entries(CATS).map(([k, c]) =>
@@ -1413,18 +1425,104 @@ function poiSheet(p, isNew){
       cat = b.dataset.cat; el.querySelectorAll('[data-cat]').forEach(x => x.classList.toggle('on', x === b));
     });
     const n = el.querySelector('#pName'); if (isNew && !p.name) setTimeout(() => n.focus(), 50);
+    el.querySelector('#pPhoto').onclick = e => {
+      const cur = state.pois.find(x => x.id === p.id) || p;
+      if (e.target.closest('#pPhotoDel')){ cur.photo = ''; delete cur.wiki; p.photo = ''; delete p.wiki; }
+      else if (e.target.closest('#pPhotoFind')){ delete cur.photo; delete cur.wiki; delete p.photo; startPhotoQueue(); }
+      else return;
+      if (!isNew) save();
+      el.querySelector('#pPhoto').innerHTML = photoBlock(cur); renderPois();
+    };
     el.querySelector('#pSave').onclick = () => {
       const name = n.value.trim(); if (!name) return n.focus();
+      // nom changé et aucune photo trouvée : on relance la recherche avec le nouveau nom
+      if (name !== p.name && p.photo === '' && !p.wiki) delete p.photo;
       Object.assign(p, {name, cat, city:el.querySelector('#pCity').value.trim() || nearestCity(p.lat, p.lng),
         address:el.querySelector('#pAddr').value.trim(),
         note:el.querySelector('#pNote').value.trim(), visited:el.querySelector('#pVis').checked});
       if (isNew) state.pois.unshift(p);
-      save(); closeSheet(); renderPois();
+      save(); closeSheet(); renderPois(); startPhotoQueue();
     };
     const del = el.querySelector('#pDel');
     if (del) del.onclick = () => { state.pois = state.pois.filter(x => x.id !== p.id); save(); closeSheet(); renderPois(); };
   }, () => { if (tempMarker){ tempMarker.remove(); tempMarker = null; } });
 }
+/* ---------- Photos Wikipédia ----------
+   Pour chaque lieu, on cherche l'article Wikipédia (anglais, puis français, puis autour de sa position) dont le titre
+   reprend le nom du lieu et qui est à moins de 3 km ; on garde le lien de sa photo principale (rien n'est stocké d'autre).
+   Wikipédia limite les requêtes : une à la fois, espacées, et une pause d'une minute s'il demande de ralentir. */
+const W_TR = {chateau:'castle', parc:'park', sanctuaire:'shrine', jardin:'garden', mont:'mount', musee:'museum', tour:'tower', pont:'bridge',
+  lac:'lake', gare:'station', ile:'island', jinja:'shrine', jingu:'shrine', taisha:'shrine', dera:'temple', ji:'temple', mt:'mount', jo:'castle'};
+const W_GEN = new Set(['castle', 'park', 'shrine', 'garden', 'mount', 'museum', 'tower', 'bridge', 'lake', 'station', 'island', 'temple']);
+const W_DROP = new Set(['the', 'and', 'des', 'les', 'del', 'of', 'de', 'du', 'la', 'le']);
+const wWords = s => new Set((fold(s).match(/[a-z0-9]+/g) || []).filter(w => (w.length > 2 || W_TR[w]) && !W_DROP.has(w)).map(w => W_TR[w] || w));
+const wDist = (a, b, c, d) => { const r = Math.PI / 180; return 6371000 * Math.hypot((d - b) * r * Math.cos((a + c) / 2 * r), (c - a) * r); };
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+async function wikiPages(host, params){
+  const u = new URL(`https://${host}/w/api.php`);
+  Object.entries({action:'query', format:'json', formatversion:2, origin:'*', prop:'pageimages|coordinates|info', piprop:'thumbnail',
+    pithumbsize:640, colimit:'max', inprop:'url', ...params}).forEach(([k, v]) => u.searchParams.set(k, v));
+  const r = await fetch(u);
+  if (r.status === 429) throw 'busy';
+  if (!r.ok) throw 'http';
+  return (await r.json()).query?.pages || [];
+}
+// le titre doit reprendre au moins 60 % des mots du nom (hors mots génériques comme « temple »), et le type s'il est précisé
+function wikiPick(pages, p, maxd){
+  const nw = wWords(p.name), core = [...nw].filter(w => !W_GEN.has(w)), gen = [...nw].filter(w => W_GEN.has(w));
+  const key = core.length ? core : [...nw];
+  let best = null;
+  pages.forEach(pg => {
+    const co = pg.coordinates?.[0];
+    if (!pg.thumbnail || !co || wDist(p.lat, p.lng, co.lat, co.lon) > maxd) return;
+    const tw = wWords(pg.title);
+    const sc = key.filter(w => tw.has(w)).length / (key.length || 1);
+    if (sc < .6 || (gen.length && !gen.some(w => tw.has(w)))) return;
+    if (!best || sc > best.sc) best = {sc, pg};
+  });
+  return best && {photo:best.pg.thumbnail.source, wiki:best.pg.fullurl};
+}
+async function findPhoto(p){
+  for (const host of ['en.wikipedia.org', 'fr.wikipedia.org']){
+    const hit = wikiPick(await wikiPages(host, {generator:'search', gsrsearch:p.name, gsrlimit:6}), p, 3000);
+    await sleep(1200);
+    if (hit) return hit;
+  }
+  const hit = wikiPick(await wikiPages('en.wikipedia.org', {generator:'geosearch', ggscoord:`${p.lat}|${p.lng}`, ggsradius:600, ggslimit:10}), p, 600);
+  await sleep(1200);
+  return hit;
+}
+// les lieux jamais cherchés (photo absente) passent un par un ; sans réseau, on réessaiera à la prochaine ouverture
+let photoBusy = false, photoRender = 0;
+async function startPhotoQueue(){
+  if (photoBusy || !navigator.onLine) return;
+  photoBusy = true;
+  try {
+    for (;;){
+      const p = state.pois.find(x => x.photo === undefined); if (!p) break;
+      let hit;
+      try { hit = await findPhoto(p); }
+      catch(e){ if (e === 'busy'){ await sleep(60000); continue; } break; }
+      // lieu supprimé, renommé ou déplacé pendant la recherche : le résultat ne lui correspond plus
+      const cur = state.pois.find(x => x.id === p.id);
+      if (!cur || cur.photo !== undefined || cur.name !== p.name || cur.lat !== p.lat) continue;
+      cur.photo = hit ? hit.photo : '';
+      if (hit) cur.wiki = hit.wiki;
+      save();
+      clearTimeout(photoRender); photoRender = setTimeout(renderPois, 500);
+      const box = document.querySelector('#pPhoto'); if (box && box.firstElementChild?.dataset.id === cur.id) box.innerHTML = photoBlock(cur);
+    }
+  } finally { photoBusy = false; }
+}
+function photoBlock(p){
+  const tools = `data-id="${p.id}"`;
+  if (p.photo) return `<figure class="pphoto" ${tools}><img src="${esc(p.photo)}" alt="${esc(p.name)}">
+    <figcaption>Photo : <a href="${esc(p.wiki || 'https://commons.wikimedia.org')}" target="_blank" rel="noopener">Wikipédia</a>
+    <button type="button" id="pPhotoDel">Retirer la photo</button></figcaption></figure>`;
+  if (p.photo === '') return `<p class="pphoto-none" ${tools}>Pas de photo Wikipédia. <button type="button" id="pPhotoFind">Chercher une photo</button></p>`;
+  return `<p class="pphoto-none" ${tools}>${p.name ? 'Recherche d’une photo sur Wikipédia…' : 'Une photo sera cherchée sur Wikipédia après l’enregistrement.'}</p>`;
+}
+
 // lien vers Plans d'Apple (ouvre l'app sur iPhone et Mac, le site ailleurs), avec les rues et l'itinéraire
 const plansUrl = (name, lat, lng, address) => lat != null
   ? `https://maps.apple.com/?ll=${lat},${lng}&q=${encodeURIComponent(name || address || 'Lieu')}`
@@ -1770,7 +1868,7 @@ function importData(d){
     state[k] = [...all.values()];
     done.push(`${incoming.length} ${word}${incoming.length > 1 ? (word === 'lieu' ? 'x' : 's') : ''} (${added} nouveau${added > 1 ? 'x' : ''})`);
   });
-  save(); renderBudget(); renderPois(); renderWishes();
+  save(); renderBudget(); renderPois(); renderWishes(); startPhotoQueue();
   return done;
 }
 /* Export : liste déroulante pour choisir les centres d'intérêt à envoyer (par ville, avec recherche) */
@@ -1883,6 +1981,8 @@ $('#menuBtn').addEventListener('click', () => menuSheet());
 
 renderBudget();
 renderPois();
+startPhotoQueue();
+addEventListener('online', startPhotoQueue);
 renderWishes();
 refreshRate();
 try { if (localStorage.getItem(PHONE_KEY) && innerWidth > 600) setPhone(true); } catch(e) {}
