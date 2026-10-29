@@ -2,7 +2,7 @@
 <html lang="fr">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-qFvJGENkLnCpPrQfb3h6aYiHUhtpJ02CroPKSJpPb8Q=' 'sha256-b/QyzttDT2e9uWgESfQEMdZrLeDH0B4ujBth1KI8CuA='; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob: https://server.arcgisonline.com https://upload.wikimedia.org https://thumb.wikimedia.org; connect-src https://nominatim.openstreetmap.org https://api.frankfurter.dev https://en.wikipedia.org https://fr.wikipedia.org; manifest-src 'self'; base-uri 'none'; object-src 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-qFvJGENkLnCpPrQfb3h6aYiHUhtpJ02CroPKSJpPb8Q=' 'sha256-cBK5YHpHR8Z/1IK3YdZ5R9HuUYOndiAkytE70p/+NaE='; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob: https://server.arcgisonline.com https://upload.wikimedia.org https://thumb.wikimedia.org; connect-src https://nominatim.openstreetmap.org https://api.frankfurter.dev https://en.wikipedia.org https://fr.wikipedia.org; manifest-src 'self'; base-uri 'none'; object-src 'none'; form-action 'none'">
 <meta name="referrer" content="strict-origin">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>PVT Japon</title>
@@ -1453,7 +1453,8 @@ function poiSheet(p, isNew){
    Wikipédia limite les requêtes : une à la fois, espacées, et une pause d'une minute s'il demande de ralentir. */
 const W_TR = {chateau:'castle', parc:'park', sanctuaire:'shrine', jardin:'garden', mont:'mount', musee:'museum', tour:'tower', pont:'bridge',
   lac:'lake', gare:'station', ile:'island', jinja:'shrine', jingu:'shrine', taisha:'shrine', dera:'temple', ji:'temple', mt:'mount', jo:'castle'};
-const W_GEN = new Set(['castle', 'park', 'shrine', 'garden', 'mount', 'museum', 'tower', 'bridge', 'lake', 'station', 'island', 'temple']);
+const W_GEN = new Set(['castle', 'park', 'shrine', 'garden', 'mount', 'museum', 'tower', 'bridge', 'lake', 'station', 'island', 'temple',
+  'stadium', 'zoo', 'aquarium', 'hall', 'building', 'pagoda', 'ropeway', 'market', 'street', 'beach', 'falls', 'river', 'port', 'airport', 'onsen']);
 const W_DROP = new Set(['the', 'and', 'des', 'les', 'del', 'of', 'de', 'du', 'la', 'le']);
 const wWords = s => new Set((fold(s).match(/[a-z0-9]+/g) || []).filter(w => (w.length > 2 || W_TR[w]) && !W_DROP.has(w)).map(w => W_TR[w] || w));
 const wDist = (a, b, c, d) => { const r = Math.PI / 180; return 6371000 * Math.hypot((d - b) * r * Math.cos((a + c) / 2 * r), (c - a) * r); };
@@ -1467,17 +1468,27 @@ async function wikiPages(host, params){
   if (!r.ok) throw 'http';
   return (await r.json()).query?.pages || [];
 }
-// le titre doit reprendre au moins 60 % des mots du nom (hors mots génériques comme « temple »), et le type s'il est précisé
+// le titre doit reprendre au moins 60 % des mots du nom (hors mots génériques comme « temple ») ; le type précisé
+// (castle, tower…) n'est exigé que si le reste du nom n'est qu'un nom de ville (« Château de Fukuoka » ≠ « Fukuoka »)
+const W_CITY = new Set(CITIES.map(c => fold(c[0])));
 function wikiPick(pages, p, maxd){
   const nw = wWords(p.name), core = [...nw].filter(w => !W_GEN.has(w)), gen = [...nw].filter(w => W_GEN.has(w));
   const key = core.length ? core : [...nw];
+  const onlyCity = core.every(w => W_CITY.has(w));
   let best = null;
   pages.forEach(pg => {
     const co = pg.coordinates?.[0];
-    if (!pg.thumbnail || !co || wDist(p.lat, p.lng, co.lat, co.lon) > maxd) return;
+    if (!pg.thumbnail || (co && wDist(p.lat, p.lng, co.lat, co.lon) > maxd)) return;
     const tw = wWords(pg.title);
-    const sc = key.filter(w => tw.has(w)).length / (key.length || 1);
-    if (sc < .6 || (gen.length && !gen.some(w => tw.has(w)))) return;
+    // score sur les mots distinctifs ou sur tous les mots, le meilleur des deux ; au moins un mot distinctif commun
+    const hits = key.filter(w => tw.has(w)).length;
+    const sc = hits ? Math.max(hits / key.length, [...nw].filter(w => tw.has(w)).length / nw.size) : 0;
+    // article sans coordonnées : seulement si tous les mots du nom y sont (et pas juste une ville)
+    if (!co && (sc < 1 || onlyCity)) return;
+    if (sc < .6 || (onlyCity && gen.length && !gen.some(w => tw.has(w)))) return;
+    // le titre désigne un autre type de lieu (« … Stadium » pour un « … Park ») : refusé
+    const tgen = [...tw].filter(w => W_GEN.has(w));
+    if (gen.length && tgen.length && !gen.some(w => tw.has(w))) return;
     if (!best || sc > best.sc) best = {sc, pg};
   });
   return best && {photo:best.pg.thumbnail.source, wiki:best.pg.fullurl};
@@ -1494,6 +1505,13 @@ async function findPhoto(p){
 }
 // les lieux jamais cherchés (photo absente) passent un par un ; sans réseau, on réessaiera à la prochaine ouverture
 let photoBusy = false, photoRender = 0;
+// règle de recherche assouplie (version 2) : les lieux restés sans photo sont cherchés une nouvelle fois
+try {
+  if ((+localStorage.getItem('pvt-japon-photo-regle') || 1) < 2){
+    state.pois.forEach(p => { if (p.photo === '' && !p.wiki) delete p.photo; });
+    save(); localStorage.setItem('pvt-japon-photo-regle', '2');
+  }
+} catch(e) {}
 async function startPhotoQueue(){
   if (photoBusy || !navigator.onLine) return;
   photoBusy = true;
