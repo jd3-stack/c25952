@@ -2,7 +2,7 @@
 <html lang="fr">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-qFvJGENkLnCpPrQfb3h6aYiHUhtpJ02CroPKSJpPb8Q=' 'sha256-Q9kX10jFh39a8NV+wfG4fANciUNplDRGD+C53trY1Ec='; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob: https://server.arcgisonline.com https://upload.wikimedia.org https://thumb.wikimedia.org https://commons.wikimedia.org; connect-src https://nominatim.openstreetmap.org https://api.frankfurter.dev https://en.wikipedia.org https://fr.wikipedia.org https://query.wikidata.org; manifest-src 'self'; base-uri 'none'; object-src 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-qFvJGENkLnCpPrQfb3h6aYiHUhtpJ02CroPKSJpPb8Q=' 'sha256-xawC3Eb31bEwMms7OAY2JT4v1bKITExv/QsvYuKCqZs='; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob: https://server.arcgisonline.com https://upload.wikimedia.org https://thumb.wikimedia.org https://commons.wikimedia.org; connect-src https://nominatim.openstreetmap.org https://api.frankfurter.dev https://en.wikipedia.org https://fr.wikipedia.org https://query.wikidata.org; manifest-src 'self'; base-uri 'none'; object-src 'none'; form-action 'none'">
 <meta name="referrer" content="strict-origin">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>PVT Japon</title>
@@ -1749,9 +1749,8 @@ $('#wishList').addEventListener('click', e => {
   if (t){
     const w = state.wishes.find(w => w.id === t.dataset.tick); w.done = !w.done;
     if (!w.done) unpayWish(w);
-    save(); renderWishes();
-    // un achat coché : proposer de l'ajouter au budget (le prix se saisit ou se corrige dans la fenêtre)
-    if (w.done && w.kind === 'acheter' && !w.paid) paySheet(w);
+    save(); renderWishes(); renderBudget();
+    if (wantsPay(w)) paySheet(w);
     return;
   }
   const ed = e.target.closest('[data-wedit]');
@@ -1759,6 +1758,8 @@ $('#wishList').addEventListener('click', e => {
 });
 $('#wishAdd').addEventListener('click', () =>
   wishSheet({id:uid(), label:'', kind:wishFilter === 'acheter' ? 'acheter' : 'faire', amount:0, note:'', done:false}, true));
+// une envie cochée : proposer de l'ajouter au budget si c'est un achat (le prix se saisit dans la fenêtre) ou si elle a un prix
+const wantsPay = w => w.done && !w.paid && (w.kind === 'acheter' || w.amount > 0);
 function wishSheet(w, isNew){
   let kind = w.kind, cur = w.cur || curNow();
   openSheet(`<h3>${isNew ? 'Nouvelle envie' : 'Modifier l\'envie'}</h3>
@@ -1782,12 +1783,14 @@ function wishSheet(w, isNew){
     if (isNew) setTimeout(() => lab.focus(), 50);
     el.querySelector('#wSave').onclick = () => {
       const label = lab.value.trim(); if (!label) return lab.focus();
-      const amount = fromInput(amt.value, cur);
+      const amount = fromInput(amt.value, cur), wasDone = w.done, before = [w.label, w.cur, w.orig];
       Object.assign(w, {label, kind, amount, cur, orig:cur === 'EUR' ? eurNum(amt.value) : amount,
         note:el.querySelector('#wNote').value.trim(), done:el.querySelector('#wDone').checked});
       if (isNew) state.wishes.unshift(w);
       if (!w.done) unpayWish(w);
-      save(); closeSheet(); renderWishes();
+      else if ([w.label, w.cur, w.orig].some((x, i) => x !== before[i])) syncPaid(w);   // une note modifiée ne touche pas au budget
+      save(); closeSheet(); renderWishes(); renderBudget();
+      if (!wasDone && wantsPay(w)) paySheet(w);
     };
     const del = el.querySelector('#wDel');
     if (del) del.onclick = () => { state.wishes = state.wishes.filter(x => x.id !== w.id); save(); closeSheet(); renderWishes(); };
@@ -1815,10 +1818,16 @@ function unpayWish(w){
   } else state.globals = state.globals.filter(g => g.id !== p.entry);
   delete w.paid;
 }
+/* Répercute sur la dépense liée le nom et le prix modifiés dans la fiche ; sans prix, la dépense est retirée. */
+function syncPaid(w){
+  const p = w.paid; if (!p) return;
+  if (w.amount <= 0) return unpayWish(w);
+  const up = {label:w.label, amount:w.amount, cur:w.cur, orig:w.orig};
+  if (p.line && p.m >= 0) setItems(p.line, p.m, items(p.line, p.m).map(it => it.id === p.entry ? {...it, ...up} : it));
+  else state.globals = state.globals.map(g => g.id === p.entry ? {...g, ...up} : g);
+}
 function paySheet(w){
-  // le mois en cours pendant le PVT (2027), sinon avant le départ ou décembre
-  const now = new Date(), y = now.getFullYear();
-  const m0 = y < 2027 ? -1 : y > 2027 ? 11 : now.getMonth();
+  const m0 = curMonth;   // le mois en cours de l'application
   const outs = state.cats.filter(c => c.type === 'out');
   const def = (outs.find(c => c.id === 'o8') || outs[0] || {}).id;
   let cur = w.cur || curNow();
