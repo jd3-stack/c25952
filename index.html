@@ -2,7 +2,7 @@
 <html lang="fr">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-qFvJGENkLnCpPrQfb3h6aYiHUhtpJ02CroPKSJpPb8Q=' 'sha256-xawC3Eb31bEwMms7OAY2JT4v1bKITExv/QsvYuKCqZs='; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob: https://server.arcgisonline.com https://upload.wikimedia.org https://thumb.wikimedia.org https://commons.wikimedia.org; connect-src https://nominatim.openstreetmap.org https://api.frankfurter.dev https://en.wikipedia.org https://fr.wikipedia.org https://query.wikidata.org; manifest-src 'self'; base-uri 'none'; object-src 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-qFvJGENkLnCpPrQfb3h6aYiHUhtpJ02CroPKSJpPb8Q=' 'sha256-I+Cg/muBxlgIBaQcf8hLZGIVpnizprkmtSwMkBPFm5Q='; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob: https://server.arcgisonline.com https://upload.wikimedia.org https://thumb.wikimedia.org https://commons.wikimedia.org; connect-src https://nominatim.openstreetmap.org https://api.frankfurter.dev https://en.wikipedia.org https://fr.wikipedia.org https://query.wikidata.org; manifest-src 'self'; base-uri 'none'; object-src 'none'; form-action 'none'">
 <meta name="referrer" content="strict-origin">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>PVT Japon</title>
@@ -148,6 +148,7 @@ main{padding:0 16px}
 .row .rename:focus{border-color:var(--ink);box-shadow:0 0 0 3px var(--sig)}
 .row .name > span{display:block;overflow:hidden;text-overflow:ellipsis}
 .row .name small{display:block;font-size:12px;font-weight:600;color:var(--muted)}
+.row .name[data-items]{cursor:pointer}
 #card-out .row .amt{width:122px}
 .row .amt.locked{background:transparent;border-style:dashed;cursor:pointer}
 .row .amt.locked input{cursor:pointer}
@@ -791,7 +792,7 @@ function rowsHTML(type){
     <div class="row">
       <button class="del" data-del="${c.id}" aria-label="Supprimer">×</button>
       ${editing ? `<input class="rename" data-rename="${c.id}" value="${esc(c.name)}" aria-label="Nom de la ligne">`
-        : `<span class="name" title="${esc(c.name)}"><span>${esc(c.name)}</span>${n ? `<small>${n} dépense${n > 1 ? 's' : ''}</small>` : ''}</span>`}
+        : `<span class="name" data-items="${c.id}" title="Voir le détail de ${esc(c.name)}"><span>${esc(c.name)}</span>${n ? `<small>${n} dépense${n > 1 ? 's' : ''}</small>` : ''}</span>`}
       <div class="amt ${n ? 'locked' : ''}"><input data-id="${c.id}" ${n ? `readonly data-items="${c.id}"` : ''} inputmode="${modeOf(rc)}" placeholder="0" value="${toInput(v, rc)}"><button class="unit" data-unit="${c.id}" aria-label="Saisir en ${rc === 'EUR' ? 'yens' : 'euros'}">${symOf(rc)}</button></div>
       <button class="add ${n ? 'has' : ''}" data-items="${c.id}" aria-label="Détailler ${esc(c.name)}">+</button>
     </div>`;
