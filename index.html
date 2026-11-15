@@ -2,7 +2,7 @@
 <html lang="fr">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-qFvJGENkLnCpPrQfb3h6aYiHUhtpJ02CroPKSJpPb8Q=' 'sha256-lBZEhx2f4bWI504EJojUy0Zl5zsAeDlcVlCi2ktg8OU='; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob: https://server.arcgisonline.com https://upload.wikimedia.org https://thumb.wikimedia.org https://commons.wikimedia.org; connect-src https://nominatim.openstreetmap.org https://api.frankfurter.dev https://en.wikipedia.org https://fr.wikipedia.org https://query.wikidata.org; manifest-src 'self'; base-uri 'none'; object-src 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-qFvJGENkLnCpPrQfb3h6aYiHUhtpJ02CroPKSJpPb8Q=' 'sha256-N2ArDq01wAi1zkiA0hTtqLANbBBQA3U+K7VJt5Pnh6w='; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob: https://server.arcgisonline.com https://upload.wikimedia.org https://thumb.wikimedia.org https://commons.wikimedia.org; connect-src https://nominatim.openstreetmap.org https://api.frankfurter.dev https://en.wikipedia.org https://fr.wikipedia.org https://query.wikidata.org; manifest-src 'self'; base-uri 'none'; object-src 'none'; form-action 'none'">
 <meta name="referrer" content="strict-origin">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>PVT Japon</title>
@@ -390,17 +390,17 @@ body.on-home .app{padding-bottom:0}
   z-index:950;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;
   background:var(--lb-bg,#1A8A3F);box-shadow:0 0 0 10px #FFC400;color:#fff;pointer-events:none;transform:translateX(-102%)}
 .line-band[hidden]{display:none}
-/* rythme repris de MangaStock : entrée 260 ms, changement d'écran, attente qu'il soit peint, sortie 300 ms */
+/* rythme MangaStock ralenti ×2 (site) : entrée 520 ms, changement d'écran, attente qu'il soit peint, sortie 600 ms */
 .line-band{will-change:transform}
-.line-band.ltr.in{animation:lbFromL 260ms cubic-bezier(.65,0,.35,1) both}
-.line-band.rtl.in{animation:lbFromR 260ms cubic-bezier(.65,0,.35,1) both}
-.line-band.ltr.out{animation:lbToR 300ms cubic-bezier(.65,0,.35,1) both}
-.line-band.rtl.out{animation:lbToL 300ms cubic-bezier(.65,0,.35,1) both}
+.line-band.ltr.in{animation:lbFromL 520ms cubic-bezier(.65,0,.35,1) both}
+.line-band.rtl.in{animation:lbFromR 520ms cubic-bezier(.65,0,.35,1) both}
+.line-band.ltr.out{animation:lbToR 600ms cubic-bezier(.65,0,.35,1) both}
+.line-band.rtl.out{animation:lbToL 600ms cubic-bezier(.65,0,.35,1) both}
 @keyframes lbFromL{from{transform:translateX(-102%)}to{transform:none}}
 @keyframes lbFromR{from{transform:translateX(102%)}to{transform:none}}
 @keyframes lbToR{from{transform:none}to{transform:translateX(102%)}}
 @keyframes lbToL{from{transform:none}to{transform:translateX(-102%)}}
-main.rise{animation:pvtRise .45s cubic-bezier(.22,1,.36,1) backwards}
+main.rise{animation:pvtRise .9s cubic-bezier(.22,1,.36,1) backwards}
 @keyframes pvtRise{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
 .lb-badge{width:96px;height:96px;box-sizing:border-box;border-radius:22px;border:8px solid #fff;display:flex;flex-direction:column;
   align-items:center;justify-content:center;line-height:1;font-family:var(--num);font-weight:700}
@@ -1347,10 +1347,10 @@ function navigate(to, before){
     requestAnimationFrame(() => requestAnimationFrame(() => {
       el.classList.replace('in', 'out');
       void main.offsetWidth; main.classList.add('rise');
-      setTimeout(() => { el.hidden = true; el.classList.remove('ltr', 'rtl', 'out'); navLock = false; }, 320);
-      setTimeout(() => main.classList.remove('rise'), 470);
+      setTimeout(() => { el.hidden = true; el.classList.remove('ltr', 'rtl', 'out'); navLock = false; }, 620);
+      setTimeout(() => main.classList.remove('rise'), 920);
     }));
-  }, 270);
+  }, 530);
 }
 
 /* ---------- Accueil ---------- */
