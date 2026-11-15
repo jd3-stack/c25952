@@ -2,7 +2,7 @@
 <html lang="fr">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-qFvJGENkLnCpPrQfb3h6aYiHUhtpJ02CroPKSJpPb8Q=' 'sha256-jR3OWwWONr12rJ0XTjOG/jQfMmXk8btQ4QZFVuO+W5g='; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob: https://server.arcgisonline.com https://upload.wikimedia.org https://thumb.wikimedia.org https://commons.wikimedia.org; connect-src https://nominatim.openstreetmap.org https://api.frankfurter.dev https://en.wikipedia.org https://fr.wikipedia.org https://query.wikidata.org; manifest-src 'self'; base-uri 'none'; object-src 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-qFvJGENkLnCpPrQfb3h6aYiHUhtpJ02CroPKSJpPb8Q=' 'sha256-GD0yo+rOdsGNkqS9BcESaG61Zm3FfO/u3oakaemid4k='; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob: https://server.arcgisonline.com https://upload.wikimedia.org https://thumb.wikimedia.org https://commons.wikimedia.org; connect-src https://nominatim.openstreetmap.org https://api.frankfurter.dev https://en.wikipedia.org https://fr.wikipedia.org https://query.wikidata.org; manifest-src 'self'; base-uri 'none'; object-src 'none'; form-action 'none'">
 <meta name="referrer" content="strict-origin">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>PVT Japon</title>
@@ -416,6 +416,31 @@ body.phone .tabbar{padding-bottom:24px}
 body.phone #map{height:420px}
 body.phone .sheet{max-height:88%;padding-bottom:36px}
 body.phone .homebar{display:block;position:absolute;bottom:8px;left:50%;width:134px;height:5px;border-radius:3px;background:var(--ink);transform:translateX(-50%);z-index:1100;pointer-events:none}
+
+/* ---------- Change ---------- */
+.conv{display:flex;flex-direction:column;gap:10px}
+.conv .side{display:flex;align-items:center;gap:10px;background:var(--soft);border:1px solid var(--field);border-radius:12px;padding:10px 12px}
+.conv .side:focus-within{border-color:var(--ink);box-shadow:0 0 0 3px var(--sig)}
+.conv .side b{flex:none;width:44px;height:44px;border-radius:10px;display:grid;place-items:center;background:var(--ink);color:var(--card);font-family:var(--num);font-size:24px;font-weight:700}
+.conv .side span{display:flex;flex-direction:column;flex:1;min-width:0}
+.conv .side small{font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.conv .side input,.conv .side output{width:100%;border:none;background:none;outline:none;padding:0;color:var(--ink);font-family:var(--num);font-weight:700;font-size:34px;line-height:1.1}
+.conv .side output{color:var(--rail)}
+.conv .swap{align-self:center;display:flex;align-items:center;gap:6px;border:1px solid var(--field);background:var(--card);color:var(--ink);border-radius:999px;padding:6px 14px;font:600 13px var(--sans);cursor:pointer;margin:-4px 0}
+.conv .rate{margin:4px 0 0;font-size:13px;color:var(--muted);display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.conv .rate strong{color:var(--ink);font-family:var(--num);font-size:15px}
+.bills{display:flex;flex-direction:column;gap:10px}
+.bill{display:flex;align-items:stretch;border:1px solid var(--line);border-radius:12px;overflow:hidden;background:var(--card);cursor:pointer;text-align:left;padding:0;color:var(--ink);font:inherit}
+.bill:hover{border-color:var(--bc)}
+.bill .face{flex:none;width:86px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;background:var(--bc);color:#fff;padding:10px 0;
+  background-image:repeating-linear-gradient(135deg,rgba(255,255,255,.09) 0 6px,transparent 6px 12px)}
+.bill .face em{font-style:normal;font-family:var(--jp);font-weight:800;font-size:17px;letter-spacing:.04em}
+.bill .face i{font-style:normal;font-size:10px;opacity:.85}
+.bill .val{flex:1;display:flex;flex-direction:column;justify-content:center;padding:8px 12px;min-width:0}
+.bill .val b{font-family:var(--num);font-size:22px;line-height:1.1}
+.bill .val small{font-size:12px;color:var(--muted)}
+.bill .eq{flex:none;display:flex;align-items:center;padding:0 14px;font-family:var(--num);font-weight:700;font-size:22px;color:var(--rail)}
+.bills-note{margin:2px 0 0;font-size:12px;color:var(--muted)}
 .gate{position:fixed;inset:0;z-index:5000;display:grid;place-items:center;padding:24px max(16px, env(safe-area-inset-left));background:var(--bg)}
 .gate[hidden]{display:none}
 .gate form{width:min(340px,100%);display:flex;flex-direction:column;gap:12px;text-align:center}
@@ -548,6 +573,23 @@ body.phone .homebar{display:block;position:absolute;bottom:8px;left:50%;width:13
         <div class="subtotal" id="wishTotal" hidden><span>Reste à prévoir</span><span></span></div>
       </div>
     </section>
+
+    <section class="tab" id="tab-change">
+      <div class="card">
+        <h2>Convertir <small>両替</small></h2>
+        <div class="conv">
+          <label class="side"><b id="cvFromSym">¥</b><span><small id="cvFromLbl">Yens</small><input id="cvIn" inputmode="decimal" placeholder="0" autocomplete="off" aria-label="Montant à convertir"></span></label>
+          <button type="button" class="swap" id="cvSwap" aria-label="Inverser"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 4v16M3 8l4-4 4 4M17 20V4M21 16l-4 4-4-4"/></svg>Inverser</button>
+          <div class="side"><b id="cvToSym">€</b><span><small id="cvToLbl">Euros</small><output id="cvOut">0</output></span></div>
+          <p class="rate"><span id="cvRate"></span><span id="cvRateSrc"></span></p>
+        </div>
+      </div>
+      <div class="card">
+        <h2>Les billets <small>お札</small></h2>
+        <div class="bills" id="bills"></div>
+        <p class="bills-note">Touche un billet pour le convertir au-dessus.</p>
+      </div>
+    </section>
   </main>
 
   <nav class="tabbar">
@@ -562,6 +604,10 @@ body.phone .homebar{display:block;position:absolute;bottom:8px;left:50%;width:13
     <button data-tab="wish">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3 2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1-4.4-4.3 6.1-.9z"/></svg>
       Wishlist
+    </button>
+    <button data-tab="change">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h13l-3.5-3.5M20 16H7l3.5 3.5"/></svg>
+      Change
     </button>
   </nav>
 </div>
@@ -953,7 +999,7 @@ async function refreshRate(){
     if (!(r > 0)) throw 0;
     rateFailed = false;
     if (state.rateAuto !== false && (r !== state.rate || d.date !== state.rateDate)){
-      applyRate(r); state.rateDate = String(d.date).slice(0, 10); save(); renderBudget();
+      applyRate(r); state.rateDate = String(d.date).slice(0, 10); save(); renderBudget(); renderChange();
     }
   } catch(e){ rateFailed = true; }
   renderRateStatus();
@@ -1167,10 +1213,11 @@ document.addEventListener('keydown', e => { if (e.key === 'Escape') closeSheet()
 document.querySelectorAll('.tabbar button').forEach(b => b.addEventListener('click', () => {
   document.querySelectorAll('.tabbar button').forEach(x => x.classList.toggle('on', x === b));
   document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.id === 'tab-' + b.dataset.tab));
-  $('#subtitle').textContent = {budget:'Budget', map:"Centres d'intérêt", wish:'Wishlist'}[b.dataset.tab];
+  $('#subtitle').textContent = {budget:'Budget', map:"Centres d'intérêt", wish:'Wishlist', change:'Change'}[b.dataset.tab];
   window.scrollTo(0, 0); $('#screen').scrollTop = 0;
   if (b.dataset.tab === 'map') initMap();
   if (b.dataset.tab === 'wish') renderWishes();   // devise ou taux ont pu changer côté budget
+  if (b.dataset.tab === 'change') renderChange();
 }));
 
 /* ---------- Aperçu téléphone ---------- */
@@ -1865,6 +1912,50 @@ function paySheet(w){
     };
   });
 }
+
+
+/* ---------- Change ---------- */
+// les billets en circulation (série 2024 ; le 2 000 ¥ existe mais se voit très peu)
+const BILLS = [
+  {v:1000,  kanji:'千円',   who:'Kitasato Shibasaburō', color:'#2F6DB5'},
+  {v:2000,  kanji:'二千円', who:'Shureimon (rare)',      color:'#4E8B57'},
+  {v:5000,  kanji:'五千円', who:'Tsuda Umeko',           color:'#7A55A6'},
+  {v:10000, kanji:'一万円', who:'Shibusawa Eiichi',      color:'#8A6A3E'},
+];
+let cvFrom = 'JPY';
+const eur2 = n => n.toLocaleString('fr-FR', {minimumFractionDigits:2, maximumFractionDigits:2}) + ' €';
+const yen0 = n => Math.round(n).toLocaleString('fr-FR') + ' ¥';
+function renderChange(){
+  const r = state.rate || 1, n = eurNum($('#cvIn').value);
+  const toEur = cvFrom === 'JPY';
+  $('#cvFromSym').textContent = toEur ? '¥' : '€'; $('#cvFromLbl').textContent = toEur ? 'Yens' : 'Euros';
+  $('#cvToSym').textContent = toEur ? '€' : '¥';   $('#cvToLbl').textContent = toEur ? 'Euros' : 'Yens';
+  $('#cvOut').textContent = toEur ? eur2(n / r) : yen0(n * r);
+  $('#cvRate').innerHTML = `1 € = <strong>${r.toLocaleString('fr-FR', {maximumFractionDigits:2})} ¥</strong> · 1 000 ¥ = <strong>${eur2(1000 / r)}</strong>`;
+  const day = state.rateDate ? new Date(state.rateDate + 'T12:00:00').toLocaleDateString('fr-FR', {day:'numeric', month:'short'}) : '';
+  $('#cvRateSrc').textContent = state.rateAuto === false ? 'Taux saisi à la main (Budget)' : 'Taux BCE' + (day ? ' du ' + day : '');
+  $('#bills').innerHTML = BILLS.map(b => `
+    <button type="button" class="bill" data-bill="${b.v}" style="--bc:${b.color}">
+      <span class="face"><em>${b.kanji}</em><i>${b.v.toLocaleString('fr-FR')}</i></span>
+      <span class="val"><b>${yen0(b.v)}</b><small>${b.who}</small></span>
+      <span class="eq">${eur2(b.v / r)}</span>
+    </button>`).join('');
+}
+$('#cvIn').addEventListener('input', renderChange);
+$('#cvSwap').addEventListener('click', () => {
+  // le résultat devient le montant saisi, dans l'autre devise
+  const r = state.rate || 1, n = eurNum($('#cvIn').value);
+  const out = cvFrom === 'JPY' ? n / r : n * r;
+  cvFrom = cvFrom === 'JPY' ? 'EUR' : 'JPY';
+  $('#cvIn').value = n ? (cvFrom === 'EUR' ? eurStr(Math.round(out * 100) / 100) : String(Math.round(out))) : '';
+  renderChange();
+});
+$('#bills').addEventListener('click', e => {
+  const b = e.target.closest('[data-bill]'); if (!b) return;
+  cvFrom = 'JPY'; $('#cvIn').value = b.dataset.bill; renderChange();
+  $('#tab-change').scrollIntoView({behavior:'smooth'});
+});
+renderChange();
 
 /* ---------- Sauvegarde ---------- */
 // les familles de données qu'on peut exporter séparément
