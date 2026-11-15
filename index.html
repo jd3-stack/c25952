@@ -2,7 +2,7 @@
 <html lang="fr">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-qFvJGENkLnCpPrQfb3h6aYiHUhtpJ02CroPKSJpPb8Q=' 'sha256-p0eEVUGwp58LZKnPoQuB3vsQLFNVJpE4gLPrHFYzOc0='; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob: https://server.arcgisonline.com https://upload.wikimedia.org https://thumb.wikimedia.org https://commons.wikimedia.org; connect-src https://nominatim.openstreetmap.org https://api.frankfurter.dev https://en.wikipedia.org https://fr.wikipedia.org https://query.wikidata.org; manifest-src 'self'; base-uri 'none'; object-src 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-qFvJGENkLnCpPrQfb3h6aYiHUhtpJ02CroPKSJpPb8Q=' 'sha256-ptFAZseAbML+8WRj5FisHXIfiqLeUcMs+Kt7sSttKuI='; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob: https://server.arcgisonline.com https://upload.wikimedia.org https://thumb.wikimedia.org https://commons.wikimedia.org; connect-src https://nominatim.openstreetmap.org https://api.frankfurter.dev https://en.wikipedia.org https://fr.wikipedia.org https://query.wikidata.org; manifest-src 'self'; base-uri 'none'; object-src 'none'; form-action 'none'">
 <meta name="referrer" content="strict-origin">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>PVT Japon</title>
@@ -385,6 +385,24 @@ body.on-home .app{padding-bottom:0}
 .stop .chev{flex:none;width:22px;height:22px;color:var(--muted)}
 .stop:focus-visible,.home-month .in:focus-visible,.home-month .nav button:focus-visible{outline:3px solid var(--sig);outline-offset:2px}
 
+/* Transition « passage de ligne » : bandeau plein écran à la couleur de la destination */
+.line-band{position:fixed;top:0;bottom:0;left:50%;width:min(480px,100%);margin-left:calc(min(480px,100%) / -2);
+  z-index:950;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;
+  background:var(--lb-bg,#1A8A3F);box-shadow:0 0 0 10px #FFC400;color:#fff;pointer-events:none;transform:translateX(-102%)}
+.line-band[hidden]{display:none}
+.line-band.ltr{animation:lbLtr 520ms cubic-bezier(.65,0,.35,1) both}
+.line-band.rtl{animation:lbRtl 520ms cubic-bezier(.65,0,.35,1) both}
+@keyframes lbLtr{0%{transform:translateX(-102%)}42%,58%{transform:none}100%{transform:translateX(102%)}}
+@keyframes lbRtl{0%{transform:translateX(102%)}42%,58%{transform:none}100%{transform:translateX(-102%)}}
+.lb-badge{width:96px;height:96px;box-sizing:border-box;border-radius:22px;border:8px solid #fff;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;line-height:1;font-family:var(--num);font-weight:700}
+.lb-badge small{font-size:15px;letter-spacing:.06em}
+.lb-badge b{font-size:30px}
+.lb-name{font-family:var(--num);font-weight:700;font-size:40px;text-align:center;padding:0 16px}
+.lb-kana{font-family:var(--jp);font-weight:800;font-size:18px;opacity:.85}
+main{transition:opacity 75ms linear}
+main.fade{opacity:0}
+
 /* Barre d'onglets */
 .tabbar{position:fixed;left:50%;transform:translateX(-50%);bottom:0;z-index:900;display:flex;width:min(480px,100%);
   background:var(--card);border-top:1px solid var(--line);padding:0 0 env(safe-area-inset-bottom)}
@@ -663,6 +681,11 @@ body.phone .homebar{display:block;position:absolute;bottom:8px;left:50%;width:13
 </div>
 
 <div class="backdrop" id="backdrop"><div class="sheet" id="sheet"></div></div>
+<div class="line-band" id="lineBand" aria-hidden="true" hidden>
+  <span class="lb-badge"><small id="lbCode"></small><b id="lbNum"></b></span>
+  <span class="lb-name" id="lbName"></span>
+  <span class="lb-kana" id="lbKana"></span>
+</div>
 <div class="homebar"></div>
 </div>
 
@@ -1259,8 +1282,10 @@ $('#backdrop').addEventListener('click', e => { if (e.target.id === 'backdrop' |
 document.addEventListener('keydown', e => { if (e.key === 'Escape') closeSheet(); });
 
 /* ---------- Tabs ---------- */
+let currentTab = 'home';
 function showTab(name){
   const home = name === 'home';
+  currentTab = name;
   document.body.classList.toggle('on-home', home);
   document.querySelectorAll('.tabbar button').forEach(x => x.classList.toggle('on', x.dataset.tab === name));
   document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.id === 'tab-' + name));
@@ -1272,8 +1297,48 @@ function showTab(name){
   if (name === 'wish') renderWishes();   // devise ou taux ont pu changer côté budget
   if (name === 'change') renderChange();
 }
-document.querySelectorAll('.tabbar button').forEach(b => b.addEventListener('click', () => showTab(b.dataset.tab)));
-$('#homeBtn').addEventListener('click', () => showTab('home'));
+document.querySelectorAll('.tabbar button').forEach(b => b.addEventListener('click', () => navigate(b.dataset.tab)));
+$('#homeBtn').addEventListener('click', () => navigate('home'));
+
+/* ---------- Transition « passage de ligne » ---------- */
+const BAND = {
+  home:   {bg:'#101418', code:'PVT', num:'JP', name:'Accueil',           kana:'おかえり'},
+  budget: {bg:'#1A8A3F', code:'BU',  num:'01', name:'Budget',            kana:'よさん'},
+  map:    {bg:'#0067C0', code:'CI',  num:'02', name:'Centres d’intérêt', kana:'めいしょ'},
+  wish:   {bg:'#C55A00', code:'WL',  num:'03', name:'Wishlist',          kana:'ほしいもの'},
+  change: {bg:'#8E3FAF', code:'CH',  num:'04', name:'Change',            kana:'りょうがえ'}
+};
+const TAB_ORDER = ['budget', 'map', 'wish', 'change'];   // ordre de la barre du bas
+const BAND_MS = 520;
+const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)');
+let navLock = false;
+// navigation déclenchée par un toucher : le bandeau couvre l'écran pendant le changement (showTab à mi-course)
+function navigate(to, before){
+  if (navLock || to === currentTab) return;
+  if ($('#backdrop').classList.contains('open')) closeSheet();
+  const from = currentTab, swap = () => { before?.(); showTab(to); };
+  navLock = true;
+  if (reduceMotion.matches){
+    const main = document.querySelector('main');
+    main.classList.add('fade');
+    setTimeout(() => { swap(); main.classList.remove('fade'); navLock = false; }, 75);
+    return;
+  }
+  const dir = from === 'home' ? 'ltr' : to === 'home' ? 'rtl'
+    : TAB_ORDER.indexOf(to) > TAB_ORDER.indexOf(from) ? 'rtl' : 'ltr';
+  const b = BAND[to], el = $('#lineBand');
+  el.style.setProperty('--lb-bg', b.bg);
+  $('#lbCode').textContent = b.code; $('#lbNum').textContent = b.num;
+  $('#lbName').textContent = b.name; $('#lbKana').textContent = b.kana;
+  el.hidden = false;
+  el.classList.remove('ltr', 'rtl'); void el.offsetWidth;   // relance l'animation
+  el.classList.add(dir);
+  setTimeout(swap, BAND_MS / 2);
+  let done = false;
+  const end = () => { if (done) return; done = true; el.hidden = true; el.classList.remove('ltr', 'rtl'); navLock = false; };
+  el.addEventListener('animationend', end, {once:true});
+  setTimeout(end, BAND_MS + 100);
+}
 
 /* ---------- Accueil ---------- */
 const KANA_MONTHS = ['いちがつ','にがつ','さんがつ','しがつ','ごがつ','ろくがつ','しちがつ','はちがつ','くがつ','じゅうがつ','じゅういちがつ','じゅうにがつ'];
@@ -1330,8 +1395,8 @@ $('#tab-home').addEventListener('click', e => {
   if (nav){ homeMonth = +nav.dataset.hm; renderAccueil(); return; }
   const go = e.target.closest('[data-open]');
   if (!go) return;
-  if (go.dataset.open === 'budget') month = homeMonth;   // ouvre le Budget sur le mois affiché
-  showTab(go.dataset.open);
+  const m = homeMonth;   // ouvre le Budget sur le mois affiché
+  navigate(go.dataset.open, go.dataset.open === 'budget' ? () => { month = m; } : null);
 });
 
 /* ---------- Aperçu téléphone ---------- */
@@ -1827,7 +1892,7 @@ function homeSheet(h, msg){
     };
     el.querySelector('#hPlace').onclick = () => {
       Object.assign(h, {address:addr.value, name:name.value}); homeDraft = h; closeSheet();
-      document.querySelector('[data-tab="map"]').click();
+      showTab('map');
       $('#placing').hidden = false; $('#map').scrollIntoView({behavior:'smooth', block:'center'});
       if (map && h.lat != null) map.flyTo([h.lat, h.lng], 16, {duration:.8});
     };
