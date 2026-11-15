@@ -2,7 +2,7 @@
 <html lang="fr">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-qFvJGENkLnCpPrQfb3h6aYiHUhtpJ02CroPKSJpPb8Q=' 'sha256-ptFAZseAbML+8WRj5FisHXIfiqLeUcMs+Kt7sSttKuI='; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob: https://server.arcgisonline.com https://upload.wikimedia.org https://thumb.wikimedia.org https://commons.wikimedia.org; connect-src https://nominatim.openstreetmap.org https://api.frankfurter.dev https://en.wikipedia.org https://fr.wikipedia.org https://query.wikidata.org; manifest-src 'self'; base-uri 'none'; object-src 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-qFvJGENkLnCpPrQfb3h6aYiHUhtpJ02CroPKSJpPb8Q=' 'sha256-lBZEhx2f4bWI504EJojUy0Zl5zsAeDlcVlCi2ktg8OU='; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob: https://server.arcgisonline.com https://upload.wikimedia.org https://thumb.wikimedia.org https://commons.wikimedia.org; connect-src https://nominatim.openstreetmap.org https://api.frankfurter.dev https://en.wikipedia.org https://fr.wikipedia.org https://query.wikidata.org; manifest-src 'self'; base-uri 'none'; object-src 'none'; form-action 'none'">
 <meta name="referrer" content="strict-origin">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>PVT Japon</title>
@@ -390,10 +390,18 @@ body.on-home .app{padding-bottom:0}
   z-index:950;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;
   background:var(--lb-bg,#1A8A3F);box-shadow:0 0 0 10px #FFC400;color:#fff;pointer-events:none;transform:translateX(-102%)}
 .line-band[hidden]{display:none}
-.line-band.ltr{animation:lbLtr 520ms cubic-bezier(.65,0,.35,1) both}
-.line-band.rtl{animation:lbRtl 520ms cubic-bezier(.65,0,.35,1) both}
-@keyframes lbLtr{0%{transform:translateX(-102%)}42%,58%{transform:none}100%{transform:translateX(102%)}}
-@keyframes lbRtl{0%{transform:translateX(102%)}42%,58%{transform:none}100%{transform:translateX(-102%)}}
+/* rythme repris de MangaStock : entrée 260 ms, changement d'écran, attente qu'il soit peint, sortie 300 ms */
+.line-band{will-change:transform}
+.line-band.ltr.in{animation:lbFromL 260ms cubic-bezier(.65,0,.35,1) both}
+.line-band.rtl.in{animation:lbFromR 260ms cubic-bezier(.65,0,.35,1) both}
+.line-band.ltr.out{animation:lbToR 300ms cubic-bezier(.65,0,.35,1) both}
+.line-band.rtl.out{animation:lbToL 300ms cubic-bezier(.65,0,.35,1) both}
+@keyframes lbFromL{from{transform:translateX(-102%)}to{transform:none}}
+@keyframes lbFromR{from{transform:translateX(102%)}to{transform:none}}
+@keyframes lbToR{from{transform:none}to{transform:translateX(102%)}}
+@keyframes lbToL{from{transform:none}to{transform:translateX(-102%)}}
+main.rise{animation:pvtRise .45s cubic-bezier(.22,1,.36,1) backwards}
+@keyframes pvtRise{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
 .lb-badge{width:96px;height:96px;box-sizing:border-box;border-radius:22px;border:8px solid #fff;display:flex;flex-direction:column;
   align-items:center;justify-content:center;line-height:1;font-family:var(--num);font-weight:700}
 .lb-badge small{font-size:15px;letter-spacing:.06em}
@@ -1309,7 +1317,6 @@ const BAND = {
   change: {bg:'#8E3FAF', code:'CH',  num:'04', name:'Change',            kana:'りょうがえ'}
 };
 const TAB_ORDER = ['budget', 'map', 'wish', 'change'];   // ordre de la barre du bas
-const BAND_MS = 520;
 const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)');
 let navLock = false;
 // navigation déclenchée par un toucher : le bandeau couvre l'écran pendant le changement (showTab à mi-course)
@@ -1326,18 +1333,24 @@ function navigate(to, before){
   }
   const dir = from === 'home' ? 'ltr' : to === 'home' ? 'rtl'
     : TAB_ORDER.indexOf(to) > TAB_ORDER.indexOf(from) ? 'rtl' : 'ltr';
-  const b = BAND[to], el = $('#lineBand');
+  const b = BAND[to], el = $('#lineBand'), main = document.querySelector('main');
   el.style.setProperty('--lb-bg', b.bg);
   $('#lbCode').textContent = b.code; $('#lbNum').textContent = b.num;
   $('#lbName').textContent = b.name; $('#lbKana').textContent = b.kana;
   el.hidden = false;
-  el.classList.remove('ltr', 'rtl'); void el.offsetWidth;   // relance l'animation
-  el.classList.add(dir);
-  setTimeout(swap, BAND_MS / 2);
-  let done = false;
-  const end = () => { if (done) return; done = true; el.hidden = true; el.classList.remove('ltr', 'rtl'); navLock = false; };
-  el.addEventListener('animationend', end, {once:true});
-  setTimeout(end, BAND_MS + 100);
+  el.classList.remove('ltr', 'rtl', 'in', 'out'); void el.offsetWidth;   // relance l'animation
+  el.classList.add(dir, 'in');
+  setTimeout(() => {
+    swap();
+    main.classList.remove('rise');
+    // attendre que le nouvel écran soit peint derrière le bandeau avant de le lever
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      el.classList.replace('in', 'out');
+      void main.offsetWidth; main.classList.add('rise');
+      setTimeout(() => { el.hidden = true; el.classList.remove('ltr', 'rtl', 'out'); navLock = false; }, 320);
+      setTimeout(() => main.classList.remove('rise'), 470);
+    }));
+  }, 270);
 }
 
 /* ---------- Accueil ---------- */
