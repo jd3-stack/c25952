@@ -2,7 +2,7 @@
 <html lang="fr">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-qFvJGENkLnCpPrQfb3h6aYiHUhtpJ02CroPKSJpPb8Q=' 'sha256-GD0yo+rOdsGNkqS9BcESaG61Zm3FfO/u3oakaemid4k='; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob: https://server.arcgisonline.com https://upload.wikimedia.org https://thumb.wikimedia.org https://commons.wikimedia.org; connect-src https://nominatim.openstreetmap.org https://api.frankfurter.dev https://en.wikipedia.org https://fr.wikipedia.org https://query.wikidata.org; manifest-src 'self'; base-uri 'none'; object-src 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-qFvJGENkLnCpPrQfb3h6aYiHUhtpJ02CroPKSJpPb8Q=' 'sha256-p0eEVUGwp58LZKnPoQuB3vsQLFNVJpE4gLPrHFYzOc0='; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob: https://server.arcgisonline.com https://upload.wikimedia.org https://thumb.wikimedia.org https://commons.wikimedia.org; connect-src https://nominatim.openstreetmap.org https://api.frankfurter.dev https://en.wikipedia.org https://fr.wikipedia.org https://query.wikidata.org; manifest-src 'self'; base-uri 'none'; object-src 'none'; form-action 'none'">
 <meta name="referrer" content="strict-origin">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>PVT Japon</title>
@@ -19,6 +19,7 @@
 <link rel="stylesheet" href="leaflet.css" integrity="sha384-sHL9NAb7lN7rfvG5lfHpm643Xkcjzp4jFvuavGOndn6pjVqS6ny56CAt3nsEVT4H">
 <style>
 :root{
+ --l-budget:#1A8A3F; --l-budget-t:#157A37; --l-poi:#0067C0; --l-poi-t:#004C8F; --l-wish:#C55A00; --l-wish-t:#9A4600; --l-fx:#8E3FAF; --l-fx-t:#7A3496; --badge-bg:#FFFFFF;
   --bg:#EEF0F3; --card:#FFFFFF; --ink:#101418; --muted:#5A6270; --line:#DCE0E6; --soft:#F6F7F9; --field:#C9CED6;
   --rail:#1A8A3F; --on-rail:#FFFFFF; --pos:#157A37; --neg:#D2232A; --neg-text:#B81D23; --sig:#FFC400;
   --head-bg:#101418; --head-fg:#FFFFFF; --head-sub:#B9C0CB; --amt:#101418;
@@ -29,6 +30,7 @@
 }
 @media (prefers-color-scheme:dark){
   :root:not([data-theme="light"]){
+ --l-budget:#2FBF5F; --l-budget-t:#4ED07A; --l-poi:#4DA3FF; --l-poi-t:#7DBBFF; --l-wish:#FF8A3D; --l-wish-t:#FFA466; --l-fx:#C27BE0; --l-fx-t:#D49BEB; --badge-bg:var(--card);
     --bg:#0B0D10; --card:#15181D; --ink:#E8EAED; --muted:#9AA3AE; --line:#262B33; --soft:#0B0D10; --field:#333944;
     --rail:#2FBF5F; --on-rail:#0B0D10; --pos:#4ED07A; --neg:#FF5A5F; --neg-text:#FF7C80;
     --head-bg:#E8EAED; --head-fg:#0B0D10; --head-sub:#3F4652; --amt:#FFB020;
@@ -36,6 +38,7 @@
   }
 }
 :root[data-theme="dark"]{
+ --l-budget:#2FBF5F; --l-budget-t:#4ED07A; --l-poi:#4DA3FF; --l-poi-t:#7DBBFF; --l-wish:#FF8A3D; --l-wish-t:#FFA466; --l-fx:#C27BE0; --l-fx-t:#D49BEB; --badge-bg:var(--card);
   --bg:#0B0D10; --card:#15181D; --ink:#E8EAED; --muted:#9AA3AE; --line:#262B33; --soft:#0B0D10; --field:#333944;
   --rail:#2FBF5F; --on-rail:#0B0D10; --pos:#4ED07A; --neg:#FF5A5F; --neg-text:#FF7C80;
   --head-bg:#E8EAED; --head-fg:#0B0D10; --head-sub:#3F4652; --amt:#FFB020;
@@ -43,12 +46,14 @@
 }
 /* fond choisi avec le bouton en haut à droite : prioritaire sur le thème du système */
 :root[data-fond="blanc"]{
+ --l-budget:#1A8A3F; --l-budget-t:#157A37; --l-poi:#0067C0; --l-poi-t:#004C8F; --l-wish:#C55A00; --l-wish-t:#9A4600; --l-fx:#8E3FAF; --l-fx-t:#7A3496; --badge-bg:#FFFFFF;
   --bg:#EEF0F3; --card:#FFFFFF; --ink:#101418; --muted:#5A6270; --line:#DCE0E6; --soft:#F6F7F9; --field:#C9CED6;
   --rail:#1A8A3F; --on-rail:#FFFFFF; --pos:#157A37; --neg:#D2232A; --neg-text:#B81D23;
   --head-bg:#101418; --head-fg:#FFFFFF; --head-sub:#B9C0CB; --amt:#101418;
   --board:#101418; --board-sub:#B9C0CB; --shadow:0 1px 2px rgba(16,20,24,.06); color-scheme:light;
 }
 :root[data-fond="noir"]{
+ --l-budget:#2FBF5F; --l-budget-t:#4ED07A; --l-poi:#4DA3FF; --l-poi-t:#7DBBFF; --l-wish:#FF8A3D; --l-wish-t:#FFA466; --l-fx:#C27BE0; --l-fx-t:#D49BEB; --badge-bg:var(--card);
   --bg:#0B0D10; --card:#15181D; --ink:#E8EAED; --muted:#9AA3AE; --line:#262B33; --soft:#0B0D10; --field:#333944;
   --rail:#2FBF5F; --on-rail:#0B0D10; --pos:#4ED07A; --neg:#FF5A5F; --neg-text:#FF7C80;
   --head-bg:#E8EAED; --head-fg:#0B0D10; --head-sub:#3F4652; --amt:#FFB020;
@@ -345,6 +350,41 @@ main{padding:0 16px}
 .home-pos.err{color:var(--neg-text);font-weight:600}
 .leaflet-container{font-family:var(--sans)}
 
+/* Accueil : plan de ligne, occupe la hauteur sous l'en-tête */
+.home-btn{border:none;background:none;padding:0;text-align:left;color:inherit;cursor:pointer;font:inherit;border-radius:10px}
+.home-btn:focus-visible{outline:3px solid var(--sig);outline-offset:3px}
+#tab-home.active{display:flex;flex-direction:column;min-height:var(--home-h,calc(100dvh - 72px))}
+body.on-home .tabbar{display:none}
+body.on-home .app{padding-bottom:0}
+.home-month{margin:16px 0 0;background:var(--card);border:1px solid var(--line);border-radius:14px;overflow:hidden;cursor:pointer;box-shadow:var(--shadow)}
+.home-month .in{display:flex;flex-direction:column;align-items:center;gap:2px;padding:18px 16px 12px;width:100%;border:none;background:none;color:inherit;cursor:pointer;font:inherit}
+.home-month .kana{font-family:var(--jp);font-weight:800;font-size:16px;color:var(--muted)}
+.home-month .name{font-family:var(--num);font-weight:700;font-size:44px;line-height:1;letter-spacing:.04em;text-transform:uppercase}
+.home-month .bal{font-family:var(--num);font-weight:700;font-size:18px;color:var(--pos);margin-top:4px}
+.home-month .bal.neg{color:var(--neg-text)}
+.home-month .bar{height:8px;background:var(--rail)}
+.home-month .bar.neg{background:var(--neg)}
+.home-month .nav{display:flex;justify-content:space-between;padding:0 8px}
+.home-month .nav button{border:none;background:none;min-height:44px;padding:0 8px;font-size:13px;color:var(--muted);cursor:pointer}
+.metro{position:relative;flex:1;display:flex;flex-direction:column;margin:14px 0 24px;padding:16px 16px 6px;background:var(--card);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow)}
+.metro-rail{position:absolute;left:45px;top:28px;bottom:var(--rail-bottom,66px);width:6px;border-radius:3px;background:var(--ink)}
+.metro-here{position:relative;display:flex;align-items:center;gap:10px;margin:0 0 10px 24px}
+.metro-here i{width:16px;height:16px;box-sizing:border-box;border-radius:50%;background:#FFC400;border:3px solid var(--ink)}
+.metro-here span{font-size:12px;font-weight:700;padding:2px 8px;border-radius:6px;background:#FFC400;color:#101418}
+.metro-stops{flex:1;display:flex;flex-direction:column}
+.stop{position:relative;flex:1;min-height:88px;display:flex;align-items:center;gap:16px;border:none;background:none;padding:0;text-align:left;color:var(--ink);cursor:pointer;font:inherit}
+.stop .badge{flex:none;width:64px;height:64px;box-sizing:border-box;border-radius:15px;border:5px solid var(--c);background:var(--badge-bg);color:var(--ink);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1;font-family:var(--num);font-weight:700}
+.stop .badge small{font-size:10px;letter-spacing:.06em}
+.stop .badge b{font-size:18px}
+.stop .txt{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px}
+.stop .nm{font-family:var(--num);font-weight:700;font-size:27px;line-height:1.1}
+.stop .kn{font-family:var(--jp);font-weight:500;font-size:13px;color:var(--muted)}
+.stop .st{font-family:var(--num);font-weight:600;font-size:18px;margin-top:2px;color:var(--ct)}
+.stop .st.neg{color:var(--neg-text)}
+.stop .chev{flex:none;width:22px;height:22px;color:var(--muted)}
+.stop:focus-visible,.home-month .in:focus-visible,.home-month .nav button:focus-visible{outline:3px solid var(--sig);outline-offset:2px}
+
 /* Barre d'onglets */
 .tabbar{position:fixed;left:50%;transform:translateX(-50%);bottom:0;z-index:900;display:flex;width:min(480px,100%);
   background:var(--card);border-top:1px solid var(--line);padding:0 0 env(safe-area-inset-bottom)}
@@ -411,6 +451,7 @@ body.phone .statusbar{display:flex;position:absolute;top:0;left:0;right:0;height
 body.phone .screen{display:block;position:absolute;top:46px;left:0;right:0;bottom:0;overflow-y:auto;overflow-x:hidden;scrollbar-width:none}
 body.phone .screen::-webkit-scrollbar{display:none}
 body.phone .app{min-height:100%;padding-bottom:110px}
+body.phone.on-home .app{padding-bottom:0}
 body.phone .top{padding-top:8px}
 body.phone .tabbar{padding-bottom:24px}
 body.phone #map{height:420px}
@@ -494,10 +535,10 @@ body.phone .homebar{display:block;position:absolute;bottom:8px;left:50%;width:13
 <div class="screen" id="screen">
 <div class="app">
   <header class="top">
-    <div class="brand">
+    <button class="brand home-btn" id="homeBtn" aria-label="Accueil">
       <div class="logo" aria-hidden="true"><span>PVT</span><b>JP</b></div>
-      <div><h1>PVT Japon</h1><p id="subtitle">Budget</p></div>
-    </div>
+      <div><h1>PVT Japon</h1><p id="subtitle">Accueil</p></div>
+    </button>
     <div class="btns">
       <button class="icon-btn" id="fondBtn" aria-label="Fond noir ou blanc"></button>
       <button class="icon-btn" id="phoneBtn" aria-label="Aperçu téléphone" aria-pressed="false" title="Aperçu téléphone">
@@ -508,7 +549,15 @@ body.phone .homebar{display:block;position:absolute;bottom:8px;left:50%;width:13
   </header>
 
   <main>
-    <section class="tab active" id="tab-budget">
+    <section class="tab active" id="tab-home" aria-label="Accueil">
+      <div class="home-month" id="homeMonth"></div>
+      <nav class="metro" id="metro" aria-label="Rubriques">
+        <div class="metro-rail" aria-hidden="true"></div>
+        <div class="metro-here" aria-hidden="true"><i></i><span>現在地 · Vous êtes ici</span></div>
+        <div id="metroStops" class="metro-stops"></div>
+      </nav>
+    </section>
+    <section class="tab" id="tab-budget">
       <nav class="months" id="months" aria-label="Mois"></nav>
       <div class="card hero" id="hero"></div>
       <div class="card" id="card-in"><h2>Revenus <span><small>収入</small><button class="hd-btn" data-edit-lines>Modifier</button><button class="hd-btn" data-reset="in">Réinitialiser</button></span></h2><div id="rows-in"></div></div>
@@ -593,7 +642,7 @@ body.phone .homebar{display:block;position:absolute;bottom:8px;left:50%;width:13
   </main>
 
   <nav class="tabbar">
-    <button class="on" data-tab="budget">
+    <button data-tab="budget">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M8.5 7.5 12 12l3.5-4.5M12 12v5M9 12.5h6M9 15h6"/></svg>
       Budget
     </button>
@@ -1210,15 +1259,80 @@ $('#backdrop').addEventListener('click', e => { if (e.target.id === 'backdrop' |
 document.addEventListener('keydown', e => { if (e.key === 'Escape') closeSheet(); });
 
 /* ---------- Tabs ---------- */
-document.querySelectorAll('.tabbar button').forEach(b => b.addEventListener('click', () => {
-  document.querySelectorAll('.tabbar button').forEach(x => x.classList.toggle('on', x === b));
-  document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.id === 'tab-' + b.dataset.tab));
-  $('#subtitle').textContent = {budget:'Budget', map:"Centres d'intérêt", wish:'Wishlist', change:'Change'}[b.dataset.tab];
+function showTab(name){
+  const home = name === 'home';
+  document.body.classList.toggle('on-home', home);
+  document.querySelectorAll('.tabbar button').forEach(x => x.classList.toggle('on', x.dataset.tab === name));
+  document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.id === 'tab-' + name));
+  $('#subtitle').textContent = {home:'Accueil', budget:'Budget', map:"Centres d'intérêt", wish:'Wishlist', change:'Change'}[name];
   window.scrollTo(0, 0); $('#screen').scrollTop = 0;
-  if (b.dataset.tab === 'map') initMap();
-  if (b.dataset.tab === 'wish') renderWishes();   // devise ou taux ont pu changer côté budget
-  if (b.dataset.tab === 'change') renderChange();
-}));
+  if (home){ homeMonth = curMonth; renderAccueil(); }
+  if (name === 'budget') renderBudget();
+  if (name === 'map') initMap();
+  if (name === 'wish') renderWishes();   // devise ou taux ont pu changer côté budget
+  if (name === 'change') renderChange();
+}
+document.querySelectorAll('.tabbar button').forEach(b => b.addEventListener('click', () => showTab(b.dataset.tab)));
+$('#homeBtn').addEventListener('click', () => showTab('home'));
+
+/* ---------- Accueil ---------- */
+const KANA_MONTHS = ['いちがつ','にがつ','さんがつ','しがつ','ごがつ','ろくがつ','しちがつ','はちがつ','くがつ','じゅうがつ','じゅういちがつ','じゅうにがつ'];
+let homeMonth = curMonth;   // « mois en cours » = celui de l'app, jamais le calendrier
+const pad2 = n => String(n).padStart(2, '0');
+function renderAccueil(){
+  const m = homeMonth, bal = balance(m), cum = cumul();
+  const sign = v => v > 0 ? '+' : '';
+  $('#homeMonth').innerHTML = `
+    <button class="in" data-open="budget" aria-label="Ouvrir le budget de ${MONTHS[m].toLowerCase()}">
+      <span class="kana">${KANA_MONTHS[m]}</span>
+      <span class="name">${MONTHS[m]}</span>
+      <span class="bal ${bal < 0 ? 'neg' : ''}">Solde ${sign(bal)}${money(bal)} · ≈ ${sign(bal)}${alt(bal)}</span>
+    </button>
+    <div class="bar ${bal < 0 ? 'neg' : ''}"></div>
+    <div class="nav">
+      ${m > 0  ? `<button data-hm="${m - 1}">‹ M${pad2(m)} ${MONTHS[m - 1]}</button>` : '<span></span>'}
+      ${m < 11 ? `<button data-hm="${m + 1}">${MONTHS[m + 1]} M${pad2(m + 2)} ›</button>` : '<span></span>'}
+    </div>`;
+  const pois = state.pois || [], done = pois.filter(p => p.visited).length, nw = (state.wishes || []).length;
+  const stops = [
+    {tab:'budget', code:'BU', num:'01', name:'Budget', kana:'よさん', c:'--l-budget', ct:'--l-budget-t',
+      stat:`Épargne fin de mois · ${money(cum[m])}`, neg: cum[m] < 0},
+    {tab:'map', code:'CI', num:'02', name:'Centres d’intérêt', kana:'めいしょ', c:'--l-poi', ct:'--l-poi-t',
+      stat: pois.length ? `${done}/${pois.length} lieux visités` : 'Aucun lieu pour l’instant'},
+    {tab:'wish', code:'WL', num:'03', name:'Wishlist', kana:'ほしいもの', c:'--l-wish', ct:'--l-wish-t',
+      stat: nw === 0 ? 'Aucune envie' : `${nw} envie${nw > 1 ? 's' : ''}`},
+    {tab:'change', code:'CH', num:'04', name:'Change', kana:'りょうがえ', c:'--l-fx', ct:'--l-fx-t',
+      stat:`1 € = ${Number(state.rate).toLocaleString('fr-FR')} ¥`}
+  ];
+  $('#metroStops').innerHTML = stops.map(s => `
+    <button class="stop" data-open="${s.tab}" style="--c:var(${s.c});--ct:var(${s.ct})">
+      <span class="badge" aria-hidden="true"><small>${s.code}</small><b>${s.num}</b></span>
+      <span class="txt"><span class="nm">${s.name}</span><span class="kn">${s.kana}</span>
+        <span class="st ${s.neg ? 'neg' : ''}">${s.stat}</span></span>
+      <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
+    </button>`).join('');
+  fitHome();
+  requestAnimationFrame(fitHome);
+}
+// hauteur de l'accueil = zone visible sous l'en-tête ; le rail s'arrête au centre du dernier badge
+function fitHome(){
+  const screen = $('#screen'), phone = document.body.classList.contains('phone');
+  const h = (phone ? screen.clientHeight : innerHeight) - $('.top').offsetHeight;
+  document.documentElement.style.setProperty('--home-h', h + 'px');
+  const metro = $('#metro'), last = metro.querySelector('.stop:last-child .badge');
+  if (!last) return;
+  const mr = metro.getBoundingClientRect(), br = last.getBoundingClientRect();
+  metro.style.setProperty('--rail-bottom', `${mr.bottom - (br.top + br.height / 2)}px`);
+}
+addEventListener('resize', () => { if (document.body.classList.contains('on-home')) fitHome(); });
+$('#tab-home').addEventListener('click', e => {
+  const nav = e.target.closest('[data-hm]');
+  if (nav){ homeMonth = +nav.dataset.hm; renderAccueil(); return; }
+  const go = e.target.closest('[data-open]');
+  if (!go) return;
+  if (go.dataset.open === 'budget') month = homeMonth;   // ouvre le Budget sur le mois affiché
+  showTab(go.dataset.open);
+});
 
 /* ---------- Aperçu téléphone ---------- */
 const PHONE_KEY = 'pvt-japon-phone';
@@ -1230,6 +1344,7 @@ function setPhone(on){
   $('#phoneBtn').setAttribute('aria-pressed', on);
   try { localStorage.setItem(PHONE_KEY, on ? '1' : ''); } catch(e) {}
   fitPhone(); renderMonths();
+  if (document.body.classList.contains('on-home')) fitHome();
   if (map) setTimeout(() => map.invalidateSize(), 50);
 }
 $('#phoneBtn').addEventListener('click', () => setPhone(!isPhone()));
@@ -2146,6 +2261,7 @@ addEventListener('online', startPhotoQueue);
 renderWishes();
 refreshRate();
 try { if (localStorage.getItem(PHONE_KEY) && innerWidth > 600) setPhone(true); } catch(e) {}
+showTab('home');
 </script>
 </body>
 </html>
